@@ -5,33 +5,20 @@ import {
   Plus,
   Send,
   ChevronDown,
-  ArrowRight,
   Monitor,
   Smartphone,
-  Code2,
-  Terminal,
   Loader2,
   Zap,
-  User,
   MessageSquare,
-  Sparkles,
   BrainCircuit,
   Brain,
   FileCode,
-  FolderOpen,
-  Search,
-  Layout,
   Layers,
-  ArrowUpRight,
   ShieldCheck,
   Mic,
-  Image as ImageIcon,
   Menu,
-  Settings,
-  Share2,
   AlertTriangle,
   X,
-  History,
   Trash2,
   Square
 } from "lucide-react"
@@ -45,15 +32,8 @@ const MODELS = [
   { id: "arcee-ai/trinity-large-preview:free", name: "Trinity Large", power: 3 },
   { id: "z-ai/glm-4.5-air:free", name: "GLM 4.5 Air", power: 3 },
   { id: "nvidia/nemotron-3-super-120b-a12b:free", name: "Nemotron 120B", power: 3 },
-  { id: "x-ai/grok-2-1212", name: "Grok 2", power: 3 },
+  { id: "x-ai/grok-code-fast-1", name: "Grok Code", power: 3 },
   { id: "nvidia/nemotron-nano-9b-v2:free", name: "Nemotron Nano", power: 1 },
-]
-
-const QUICK_STARTS = [
-  "Build a SaaS landing page with Tailwind",
-  "Create an AI analytics dashboard",
-  "Build a multi-step component form",
-  "Create a personal portfolio site"
 ]
 
 // --- Atomic Components ---
@@ -69,7 +49,6 @@ const ModelIcon = ({ power, active = false }: { power: number; active?: boolean 
 
 const IntelligenceSelector = ({ value, onChange, align = "top" }: { value: string; onChange: (id: string) => void; align?: "top" | "bottom" }) => {
   const [open, setOpen] = useState(false)
-  const current = MODELS.find(m => m.id === value) || MODELS[0]
   return (
     <div className="relative">
       <button onClick={() => setOpen(!open)} className="flex items-center space-x-1.5 text-[#666] hover:text-white transition-all group">
@@ -181,10 +160,12 @@ export default function OpenBrainyApp() {
         const thinking = thinkingMatch ? thinkingMatch[1].trim() : undefined
 
         // Remove thinking block AND any multi-file protocol blocks from visible chat
-        let cleanContent = assistantContent
+        const cleanContent = assistantContent
             .replace(/<thinking>[\s\S]*?<\/thinking>/g, "")
+            .replace(/💭 Reasoning[\s\S]*?(?=\n\n|\n---|$)/g, "")
             .replace(/--- FILE: [\s\S]*? ---[\s\S]*?--- END ---/g, "")
             .replace(/--- DELETE: [\s\S]*? ---/g, "")
+            .replace(/```[\s\S]*?```/g, "") // Final safety: hide code blocks in chat
             .trim()
 
         store.updateSession(sessionId, {
@@ -227,7 +208,7 @@ export default function OpenBrainyApp() {
           }
       }
 
-    } catch (e: any) {
+    } catch (e: unknown) {
         console.error(e)
     } finally {
       setIsGenerating(false)
@@ -245,18 +226,19 @@ export default function OpenBrainyApp() {
   }
 
   const startVoice = () => {
-    if (!('webkitSpeechRecognition' in window)) {
+    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    if (!SpeechRecognition) {
         alert("Voice recognition not supported in this browser.")
         return
     }
-    const recognition = new (window as any).webkitSpeechRecognition()
+    const recognition = new SpeechRecognition()
     recognition.continuous = false
     recognition.interimResults = false
     recognition.lang = "en-US"
 
     recognition.onstart = () => setIsListening(true)
     recognition.onend = () => setIsListening(false)
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: { results: { transcript: string }[][] }) => {
         const text = event.results[0][0].transcript
         setInput(prev => prev + (prev ? " " : "") + text)
     }
@@ -270,9 +252,9 @@ export default function OpenBrainyApp() {
         method: "POST",
         body: JSON.stringify({ files: codebase, sandboxName: `ob-ws-${id.slice(0,8)}` }),
       })
-      const data = await res.json()
+      const data = await res.json() as { url?: string };
       if (data.url) setSandboxUrl(data.url)
-    } catch (e: any) {
+    } catch (e: unknown) {
         console.error(e)
     } finally {
         setTaskStatus(null)

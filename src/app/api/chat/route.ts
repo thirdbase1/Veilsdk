@@ -3,6 +3,19 @@ import { GENERATOR_SYSTEM_PROMPT } from "@/lib/prompts";
 
 export const dynamic = 'force-dynamic';
 
+interface ChatStreamDelta {
+  content?: string | null;
+  reasoning?: string | null;
+}
+
+interface ChatStreamChoice {
+  delta: ChatStreamDelta;
+}
+
+interface ChatStreamChunk {
+  choices: ChatStreamChoice[];
+}
+
 export async function POST(req: Request) {
   const { messages, model, files } = await req.json();
 
@@ -11,7 +24,7 @@ export async function POST(req: Request) {
   });
 
   const codebaseView = files && files.length > 0
-    ? `INDUSTRIAL CODEBASE STATE:\n${files.map((f: any) => `### FILE: ${f.path}\n${f.content}`).join("\n\n")}`
+    ? `INDUSTRIAL CODEBASE STATE:\n${files.map((f: { path: string; content: string }) => `### FILE: ${f.path}\n${f.content}`).join("\n\n")}`
     : "STATE: NEW_PROJECT_EMPTY";
 
   const systemMessage = `${GENERATOR_SYSTEM_PROMPT}\n\n${codebaseView}`;
@@ -32,11 +45,12 @@ export async function POST(req: Request) {
       async start(controller) {
         const encoder = new TextEncoder();
         try {
-          const stream = response as any;
-          if (stream[Symbol.asyncIterator]) {
+          const stream = response as unknown as AsyncIterable<ChatStreamChunk>;
+          if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
             for await (const chunk of stream) {
-              const text = chunk.choices[0]?.delta?.content || "";
-              const reasoning = (chunk.choices[0]?.delta as any)?.reasoning || "";
+              const delta = chunk.choices[0]?.delta;
+              const text = delta?.content || "";
+              const reasoning = delta?.reasoning || "";
 
               if (reasoning) {
                 controller.enqueue(encoder.encode(`<thinking>${reasoning}</thinking>`));
@@ -46,15 +60,16 @@ export async function POST(req: Request) {
               }
             }
           } else {
-            // Handle non-stream response if necessary
-            const text = response.choices?.[0]?.message?.content || "";
+            const staticResponse = response as { choices: { message: { content: string } }[] };
+            const text = staticResponse.choices?.[0]?.message?.content || "";
             controller.enqueue(encoder.encode(text));
           }
-        } catch (e: any) {
-          if (e.name === 'AbortError') {
+        } catch (e: unknown) {
+          const error = e as Error;
+          if (error.name === 'AbortError') {
               console.log("Stream aborted by user");
           } else {
-              console.error("Stream break:", e);
+              console.error("Stream break:", error);
           }
         } finally {
           controller.close();

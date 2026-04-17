@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     let sandbox;
     try {
       sandbox = await Sandbox.get({ name, ...authConfig });
-    } catch (e) {
+    } catch {
       sandbox = await Sandbox.create({
         name,
         ...authConfig,
@@ -54,9 +54,10 @@ export async function POST(req: Request) {
       sandboxName: sandbox.name,
       url: protocolUrl,
       status: "industrial_active",
-      processId: (result as any).id
+      processId: (result as unknown as { id: string }).id
     });
-  } catch (error: any) {
+  } catch (e: unknown) {
+    const error = e as Error;
     console.error("Open Brainy Backend Error:", error);
     return Response.json({
         error: "Brainy Backend Cluster Failure",

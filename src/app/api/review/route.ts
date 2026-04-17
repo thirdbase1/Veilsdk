@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 const REVIEW_MODELS = [
   "nvidia/nemotron-3-super-120b-a12b:free",
-  "x-ai/grok-2-1212",
+  "x-ai/grok-code-fast-1",
   "google/gemini-2.0-flash-001:free" // Final fallback
 ];
 
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     apiKey: process.env.OPENROUTER_API_KEY,
   });
 
-  const codebaseStr = files.map((f: any) => `[${f.path}]\n${f.content}`).join("\n\n");
+  const codebaseStr = files.map((f: { path: string; content: string }) => `[${f.path}]\n${f.content}`).join("\n\n");
 
   for (const model of REVIEW_MODELS) {
     try {
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
                 { role: "user", content: `USER PROMPT: ${prompt}\n\nGENERATED CODEBASE:\n${codebaseStr}` }
             ],
         }
-      });
+      }) as { choices: { message: { content: string } }[] };
 
       const content = response.choices[0]?.message?.content;
       if (content) {
