@@ -8,7 +8,7 @@ export async function POST(req: Request) {
 
   const openrouter = new OpenAI({
     baseURL: "https://openrouter.ai/api/v1",
-    apiKey: process.env.OPENROUTER_API_KEY || "industrial_dummy",
+    apiKey: process.env.OPENROUTER_API_KEY,
   });
 
   const codebaseView = files && files.length > 0
