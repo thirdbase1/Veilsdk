@@ -1,6 +1,8 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from "react"
+import hljs from 'highlight.js'
+import 'highlight.js/styles/atom-one-dark.css'
 import {
   Plus,
   Send,
@@ -63,6 +65,35 @@ const ModelIcon = ({ power, active = false }: { power: number; active?: boolean 
     <div className={cn("rounded-full border flex items-center justify-center transition-all shrink-0", active ? "border-white bg-white" : "border-white/10 bg-transparent")} style={{ width: size, height: size }}>
       {active && <div className="w-1 h-1 bg-black rounded-full" />}
     </div>
+  )
+}
+
+const CodePreview = ({ content }: { content: string }) => {
+  const [highlightedCode, setHighlightedCode] = React.useState("")
+  
+  React.useEffect(() => {
+    if (content) {
+      try {
+        // Auto-detect language based on common patterns
+        let language = "plaintext"
+        if (content.includes("function ") || content.includes("const ") || content.includes("=>")) language = "javascript"
+        if (content.includes("import") || content.includes("export")) language = "javascript"
+        if (content.includes("<") && content.includes(">")) language = "jsx"
+        if (content.includes("class ") || content.includes("def ")) language = "python"
+        if (content.includes("@") && content.includes("interface")) language = "typescript"
+        
+        const highlighted = hljs.highlight(content, { language, ignoreIllegals: true }).value
+        setHighlightedCode(highlighted)
+      } catch {
+        setHighlightedCode(content)
+      }
+    }
+  }, [content])
+
+  return (
+    <pre className="whitespace-pre-wrap text-[13px] leading-[1.6]">
+      <code dangerouslySetInnerHTML={{ __html: highlightedCode }} />
+    </pre>
   )
 }
 
@@ -561,7 +592,20 @@ export default function OpenBrainyApp() {
                                 </div>
                             </details>
                         )}
-                        {m.content || (isGenerating && i === activeSession.messages.length - 1 && <div className="flex space-x-1 py-1"><div className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce" /><div className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce [animation-delay:0.2s]" /></div>)}
+                        {m.content ? (
+                          <div className="group relative">
+                            {m.content}
+                            {isGenerating && i === activeSession.messages.length - 1 && (
+                              <span className="inline-block w-2 h-5 ml-1 bg-white/60 animate-pulse" />
+                            )}
+                          </div>
+                        ) : isGenerating && i === activeSession.messages.length - 1 ? (
+                          <div className="flex space-x-1.5 py-1">
+                            <div className="w-2 h-2 bg-white/40 rounded-full animate-bounce" />
+                            <div className="w-2 h-2 bg-white/40 rounded-full animate-bounce [animation-delay:0.2s]" />
+                            <div className="w-2 h-2 bg-white/40 rounded-full animate-bounce [animation-delay:0.4s]" />
+                          </div>
+                        ) : null}
                     </div>
                 </div>
             ))}
@@ -660,19 +704,38 @@ export default function OpenBrainyApp() {
                                           key={f.path}
                                           onClick={() => setActiveFile(f.path)}
                                           className={cn(
-                                            "flex items-center space-x-2 px-3 py-2 rounded-lg text-[11px] font-bold transition-all truncate cursor-pointer",
+                                            "flex items-center space-x-2 px-3 py-2 rounded-lg text-[11px] font-bold transition-all truncate cursor-pointer relative group",
                                             (activeFile === f.path || (!activeFile && idx === 0)) ? "bg-white/10 text-white" : "text-[#444] hover:bg-white/5 hover:text-[#888]"
                                           )}
                                         >
                                             <FileCode className="w-3.5 h-3.5" />
-                                            <span>{f.path.split('/').pop()}</span>
+                                            <span className="truncate flex-1">{f.path.split('/').pop()}</span>
+                                            {isGenerating && (
+                                              <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse shrink-0" title="Updating..." />
+                                            )}
                                         </div>
                                     ))}
                                 </div>
-                                <div className="flex-1 p-6 overflow-auto font-mono text-[13px] leading-[1.6] text-[#888]">
-                                    <pre className="whitespace-pre-wrap">
-                                        {activeSession.files.find(f => f.path === (activeFile || activeSession.files[0]?.path))?.content || "// Select a file to view code."}
-                                    </pre>
+                                <div className="flex-1 flex flex-col overflow-hidden bg-[#0d1117]">
+                                    <div className="flex-1 p-6 overflow-auto font-mono">
+                                        {activeSession.files.find(f => f.path === (activeFile || activeSession.files[0]?.path))?.content ? (
+                                          <CodePreview content={activeSession.files.find(f => f.path === (activeFile || activeSession.files[0]?.path))?.content || ""} />
+                                        ) : (
+                                          <div className="text-[#888] text-[13px] italic">// Select a file to view code.</div>
+                                        )}
+                                    </div>
+                                    {isGenerating && (
+                                      <div className="border-t border-white/5 px-6 py-2 bg-gradient-to-r from-cyan-500/10 via-transparent to-transparent">
+                                        <div className="flex items-center space-x-2">
+                                          <div className="flex space-x-1">
+                                            <div className="w-1 h-1 bg-cyan-400 rounded-full animate-pulse" />
+                                            <div className="w-1 h-1 bg-cyan-400 rounded-full animate-pulse [animation-delay:0.1s]" />
+                                            <div className="w-1 h-1 bg-cyan-400 rounded-full animate-pulse [animation-delay:0.2s]" />
+                                          </div>
+                                          <span className="text-[10px] text-cyan-400/70 font-bold">Live Update</span>
+                                        </div>
+                                      </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
