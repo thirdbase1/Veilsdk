@@ -10,6 +10,10 @@ type FileItem = {
 export async function POST(req: Request) {
   const { files, sandboxName } = await req.json();
 
+  console.log("[v0] Sandbox API called");
+  console.log("[v0] Files to sync:", files?.length || 0);
+  console.log("[v0] Sandbox name:", sandboxName);
+
   try {
     const name = sandboxName || "open-brainy-default";
     const authConfig = {
@@ -18,37 +22,50 @@ export async function POST(req: Request) {
       token: process.env.VERCEL_TOKEN!,
     };
 
+    console.log("[v0] Auth config ready");
+
     let sandbox;
     try {
+      console.log("[v0] Attempting to get existing sandbox:", name);
       sandbox = await Sandbox.get({ name, ...authConfig });
+      console.log("[v0] Got existing sandbox");
     } catch (e) {
+      console.log("[v0] Creating new sandbox:", name);
       sandbox = await Sandbox.create({
         name,
         ...authConfig,
         snapshotExpiration: 14 * 24 * 60 * 60 * 1000,
-        resources: { vcpus: 2 } as any, // Cast to handle varying SDK versions
+        resources: { vcpus: 2 } as any,
       });
+      console.log("[v0] New sandbox created");
     }
 
     if (!sandbox) {
       throw new Error("Failed to allocate Brainy compute cluster.");
     }
 
+    console.log("[v0] Sandbox active, syncing files...");
+
     if (files && files.length > 0) {
-        await sandbox.writeFiles(files.map((f: FileItem) => ({
-            path: f.path,
-            content: f.content
-        })));
+      await sandbox.writeFiles(files.map((f: FileItem) => ({
+        path: f.path,
+        content: f.content
+      })));
+      console.log("[v0] Files synced successfully");
     }
 
+    console.log("[v0] Starting dev server...");
     const result = await sandbox.runCommand({
       cmd: "npm",
       args: ["run", "dev"],
       detached: true,
     });
+    console.log("[v0] Dev server started, process:", (result as any).id);
 
     const domain = sandbox.domain(3000);
     const protocolUrl = domain.startsWith('http') ? domain : `https://${domain}`;
+
+    console.log("[v0] Sandbox domain:", protocolUrl);
 
     return Response.json({
       sandboxName: sandbox.name,
@@ -57,10 +74,11 @@ export async function POST(req: Request) {
       processId: (result as any).id
     });
   } catch (error: any) {
-    console.error("Open Brainy Backend Error:", error);
+    console.error("[v0] Sandbox error:", error);
+    console.error("[v0] Error message:", error.message);
     return Response.json({
-        error: "Brainy Backend Cluster Failure",
-        message: error.message,
+      error: "Brainy Backend Cluster Failure",
+      message: error.message,
     }, { status: 500 });
   }
 }
