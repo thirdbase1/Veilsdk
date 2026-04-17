@@ -52,7 +52,12 @@ export async function POST(req: Request) {
           if (e.name === 'AbortError') {
               console.log("Stream aborted by user");
           } else {
-              console.error("Stream break:", e);
+              console.error("Stream error:", e.message);
+              // Send error message to client
+              const errorMsg = e.statusCode === 429 
+                ? "Rate limit reached on OpenRouter. Please add credits to your OpenRouter account to continue using the models."
+                : "Error generating response. Please check your API key and try again.";
+              controller.enqueue(encoder.encode(`\n\n[ERROR]: ${errorMsg}`));
           }
         } finally {
           controller.close();

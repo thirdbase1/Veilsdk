@@ -23,7 +23,6 @@ import {
   FolderOpen,
   Search,
   Layout,
-  Layers,
   ArrowUpRight,
   ShieldCheck,
   Mic,
@@ -582,19 +581,31 @@ export default function OpenBrainyApp() {
                     </div>
                     <div className={cn("text-[14px] leading-relaxed whitespace-pre-wrap max-w-full", m.role === "user" ? "text-white" : "text-[#aaa]")}>
                         {m.thinking && (
-                            <details className="mb-4 group">
-                                <summary className="list-none cursor-pointer flex items-center space-x-2 text-[11px] text-[#555] font-black uppercase tracking-widest hover:text-[#888] transition-colors">
-                                    <BrainCircuit className="w-3 h-3" />
-                                    <span>Thought Process</span>
-                                </summary>
-                                <div className="mt-3 bg-[#0f0f0f] border border-white/5 rounded-xl p-4 text-[12px] text-[#666] italic leading-relaxed">
-                                    {m.thinking}
+                            <div className={cn("mb-4 border-l-2 pl-4", isGenerating && i === activeSession.messages.length - 1 ? "border-l-blue-400 bg-blue-500/5" : "border-l-white/10 bg-white/5")} >
+                                <div className="flex items-center space-x-2 mb-2">
+                                    <div className="flex space-x-1">
+                                        {isGenerating && i === activeSession.messages.length - 1 && (
+                                            <>
+                                                <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
+                                                <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse [animation-delay:0.2s]" />
+                                            </>
+                                        )}
+                                    </div>
+                                    <span className={cn("text-[11px] font-black uppercase tracking-widest", isGenerating && i === activeSession.messages.length - 1 ? "text-blue-300" : "text-[#666]")}>
+                                        💭 Reasoning
+                                    </span>
                                 </div>
-                            </details>
+                                <div className="text-[12px] text-[#888] leading-relaxed font-mono">
+                                    {m.thinking}
+                                    {isGenerating && i === activeSession.messages.length - 1 && (
+                                        <span className="inline-block w-1.5 h-4 ml-1 bg-blue-400/60 animate-pulse" />
+                                    )}
+                                </div>
+                            </div>
                         )}
                         {m.content ? (
                           <div className="group relative">
-                            {m.content}
+                            <div className="text-white">{m.content}</div>
                             {isGenerating && i === activeSession.messages.length - 1 && (
                               <span className="inline-block w-2 h-5 ml-1 bg-white/60 animate-pulse" />
                             )}
@@ -685,9 +696,30 @@ export default function OpenBrainyApp() {
                                 <iframe src={sandboxUrl} className="w-full h-full border-none" />
                             </div>
                         ) : (
-                            <div className="flex flex-col items-center space-y-6 opacity-20 text-white">
-                                <Layers className="w-16 h-16" />
-                                <span className="text-[10px] font-black uppercase tracking-[0.5em]">Awaiting Generation</span>
+                            <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-gradient-to-b from-transparent via-blue-500/5 to-transparent">
+                                <div className="max-w-2xl w-full space-y-4">
+                                    <div className="flex items-center space-x-2">
+                                        <div className="flex space-x-1">
+                                            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                                            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse [animation-delay:0.2s]" />
+                                            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse [animation-delay:0.4s]" />
+                                        </div>
+                                        <span className="text-sm text-blue-300/70 font-semibold">Reasoning in progress...</span>
+                                    </div>
+                                    <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-2 min-h-[120px]">
+                                        {activeSession.messages.length > 0 && activeSession.messages[activeSession.messages.length - 1]?.thinking ? (
+                                            <div className="text-sm text-white/70 leading-relaxed whitespace-pre-wrap font-mono text-xs">
+                                                <span className="text-blue-300/80 font-semibold">💭 Thinking: </span>
+                                                {activeSession.messages[activeSession.messages.length - 1].thinking}
+                                            </div>
+                                        ) : (
+                                            <div className="text-white/40 text-sm italic">AI is analyzing your request and reasoning through the solution...</div>
+                                        )}
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-[11px] text-white/30 uppercase tracking-wider">Generating code & files...</p>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </motion.div>
