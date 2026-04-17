@@ -12,8 +12,7 @@ import {
   Smartphone,
   Code2,
   RefreshCcw,
-  Copy,
-  Terminal
+  Terminal,
 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
@@ -21,15 +20,14 @@ import { cn } from "@/lib/utils"
 // --- Constants & Data ---
 
 const FREE_MODELS = [
-  { id: "google/gemini-2.0-flash-001:free", name: "Gemini 2.0 Flash" },
-  { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 70B" },
-  { id: "mistralai/mistral-7b-instruct:free", name: "Mistral 7B" },
-  { id: "google/gemma-2-9b-it:free", name: "Gemma 2 9B" },
-  { id: "openrouter/free", name: "Auto (Free Router)" },
+  { id: "google/gemini-2.0-flash-001:free", name: "Gemini 2.0 Flash", power: 1 },
+  { id: "meta-llama/llama-3.3-70b-instruct:free", name: "Llama 3.3 70B", power: 3 },
+  { id: "mistralai/mistral-7b-instruct:free", name: "Mistral 7B", power: 1 },
+  { id: "google/gemma-2-9b-it:free", name: "Gemma 2 9B", power: 2 },
+  { id: "openrouter/free", name: "Auto Router", power: 2 },
 ]
 
 const DASHBOARD_CODE = `import React from 'react';
-import { Card } from '@/components/ui/card';
 
 export default function Dashboard() {
   return (
@@ -40,18 +38,18 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-6 bg-indigo-500/10 border-indigo-500/20">
+        <div className="p-6 bg-indigo-500/10 border border-indigo-500/20 rounded-xl">
           <p className="text-xs font-medium text-indigo-400">Total Inference</p>
           <p className="text-3xl font-bold mt-2">1.2M</p>
-        </Card>
-        <Card className="p-6 bg-white/5 border-white/10">
+        </div>
+        <div className="p-6 bg-white/5 border border-white/10 rounded-xl">
           <p className="text-xs font-medium text-gray-400">Active Agents</p>
           <p className="text-3xl font-bold mt-2">842</p>
-        </Card>
-        <Card className="p-6 bg-white/5 border-white/10">
+        </div>
+        <div className="p-6 bg-white/5 border border-white/10 rounded-xl">
           <p className="text-xs font-medium text-gray-400">Avg. Latency</p>
           <p className="text-3xl font-bold mt-2">124ms</p>
-        </Card>
+        </div>
       </div>
 
       <div className="h-64 bg-white/5 border border-white/10 rounded-3xl p-8">
@@ -72,7 +70,21 @@ export default function Dashboard() {
 
 // --- Components ---
 
-const ModelSelector = ({ selectedModel, onSelect }: { selectedModel: string, onSelect: (id: string) => void }) => {
+const ModelIcon = ({ power, active = false }: { power: number, active?: boolean }) => {
+  const sizes = [6, 10, 14]
+  const size = sizes[power - 1] || 10
+
+  return (
+    <div className={cn(
+      "rounded-full border flex items-center justify-center transition-all",
+      active ? "border-white bg-white" : "border-[#404040] bg-transparent"
+    )} style={{ width: size, height: size }}>
+      {active && <div className="w-1 h-1 bg-black rounded-full" />}
+    </div>
+  )
+}
+
+const ModelSelectorDropdown = ({ selectedModel, onSelect }: { selectedModel: string, onSelect: (id: string) => void }) => {
   const [isOpen, setIsOpen] = useState(false)
   const currentModel = FREE_MODELS.find(m => m.id === selectedModel) || FREE_MODELS[0]
 
@@ -80,11 +92,11 @@ const ModelSelector = ({ selectedModel, onSelect }: { selectedModel: string, onS
     <div className="relative">
       <div
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 bg-[#171717] border border-[#262626] rounded-full px-2.5 py-1 cursor-pointer hover:border-[#404040] transition-colors"
+        className="flex items-center space-x-2 bg-[#171717] border border-[#262626] rounded-xl px-3 py-1.5 cursor-pointer hover:border-[#404040] transition-colors group"
       >
-        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-        <span className="text-[11px] font-medium text-[#a1a1a1]">{currentModel.name}</span>
-        <ChevronDown className={cn("w-3 h-3 text-[#737373] transition-transform", isOpen && "rotate-180")} />
+        <ModelIcon power={currentModel.power} />
+        <span className="text-[12px] font-medium text-[#a1a1a1] group-hover:text-white transition-colors">{currentModel.name}</span>
+        <ChevronDown className={cn("w-3.5 h-3.5 text-[#737373] transition-transform", isOpen && "rotate-180")} />
       </div>
 
       <AnimatePresence>
@@ -92,11 +104,12 @@ const ModelSelector = ({ selectedModel, onSelect }: { selectedModel: string, onS
           <>
             <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
             <motion.div
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 5 }}
-              className="absolute top-full right-0 mt-2 w-56 bg-[#171717] border border-[#262626] rounded-xl shadow-2xl z-20 overflow-hidden"
+              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              className="absolute bottom-full left-0 mb-2 w-64 bg-[#171717] border border-[#262626] rounded-2xl shadow-2xl z-20 overflow-hidden p-1.5"
             >
+              <div className="px-3 py-2 text-[10px] text-[#525252] font-bold uppercase tracking-wider">Select Model</div>
               {FREE_MODELS.map((model) => (
                 <div
                   key={model.id}
@@ -104,12 +117,16 @@ const ModelSelector = ({ selectedModel, onSelect }: { selectedModel: string, onS
                     onSelect(model.id)
                     setIsOpen(false)
                   }}
-                  className="px-4 py-2.5 text-[12px] hover:bg-[#262626] transition-colors cursor-pointer flex items-center justify-between"
+                  className={cn(
+                    "px-3 py-2.5 rounded-xl text-[12px] transition-all cursor-pointer flex items-center space-x-3",
+                    selectedModel === model.id ? "bg-[#262626] text-white" : "text-[#a1a1a1] hover:bg-[#1a1a1a] hover:text-[#ededed]"
+                  )}
                 >
-                  <span className={cn(selectedModel === model.id ? "text-white font-medium" : "text-[#a1a1a1]")}>
-                    {model.name}
-                  </span>
-                  {selectedModel === model.id && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                  <ModelIcon power={model.power} active={selectedModel === model.id} />
+                  <div className="flex flex-col">
+                    <span className="font-medium">{model.name}</span>
+                    <span className="text-[10px] opacity-50">{model.power === 3 ? "Powerful" : model.power === 2 ? "Balanced" : "Fast & Lazy"}</span>
+                  </div>
                 </div>
               ))}
             </motion.div>
@@ -133,11 +150,14 @@ const ChatInterface = () => {
             </svg>
           </div>
           <div className="flex flex-col">
-            <span className="font-bold text-[13px] leading-tight">v0</span>
+            <span className="font-bold text-[13px] leading-tight text-white">v0</span>
             <span className="text-[10px] text-[#737373]">v0.dev/chat</span>
           </div>
         </div>
-        <ModelSelector selectedModel={model} onSelect={setModel} />
+        <div className="flex items-center space-x-3 text-[#a1a1a1]">
+            <RefreshCcw className="w-4 h-4 cursor-pointer hover:text-white transition-colors" />
+            <Share2 className="w-4 h-4 cursor-pointer hover:text-white transition-colors" />
+        </div>
       </header>
 
       <div className="flex-1 overflow-auto p-5 space-y-6 scroll-hide">
@@ -169,34 +189,37 @@ const ChatInterface = () => {
                 ))}
               </ul>
             </div>
-            <p className="text-[#a1a1a1]">Check the preview on the right for the full implementation.</p>
-          </div>
-          <div className="flex items-center space-x-4 ml-2">
-            <button className="p-1 text-[#737373] hover:text-white transition-colors"><Copy className="w-4 h-4" /></button>
-            <button className="p-1 text-[#737373] hover:text-white transition-colors"><RefreshCcw className="w-4 h-4" /></button>
           </div>
         </div>
       </div>
 
       <div className="p-4 bg-[#0a0a0a] border-t border-[#262626]">
-        <div className="relative bg-[#111111] border border-[#262626] rounded-2xl p-4 shadow-2xl focus-within:border-[#404040] transition-all duration-200">
+        <div className="relative bg-[#111111] border border-[#262626] rounded-3xl p-4 shadow-2xl focus-within:border-[#404040] transition-all duration-200">
           <textarea
             placeholder="Ask v0 to refine the design..."
-            className="w-full bg-transparent border-none focus:outline-none text-[13px] resize-none h-16 text-[#ededed] placeholder-[#525252]"
+            className="w-full bg-transparent border-none focus:outline-none text-[13px] resize-none h-20 text-[#ededed] placeholder-[#525252]"
           />
           <div className="flex justify-between items-center pt-2">
-            <div className="flex space-x-2 text-[#737373]">
-              <button className="p-1.5 hover:bg-[#1a1a1a] rounded-lg transition-colors"><Plus className="w-4 h-4" /></button>
-              <button className="p-1.5 hover:bg-[#1a1a1a] rounded-lg transition-colors"><Camera className="w-4 h-4" /></button>
+            <div className="flex items-center space-x-3">
+                <button className="p-1.5 hover:bg-[#1a1a1a] rounded-xl transition-colors text-[#737373] hover:text-white">
+                    <Plus className="w-5 h-5" />
+                </button>
+                <div className="h-6 w-[1px] bg-[#262626]" />
+                <ModelSelectorDropdown selectedModel={model} onSelect={setModel} />
             </div>
-            <div className="flex items-center space-x-2">
-              <span className="text-[10px] text-[#404040] font-medium mr-1">Shift + Enter to send</span>
-              <button className="bg-white text-black p-2 rounded-xl hover:bg-[#e5e5e5] transition-all active:scale-95 shadow-lg">
+            <div className="flex items-center space-x-3">
+              <button className="p-1.5 hover:bg-[#1a1a1a] rounded-xl transition-colors text-[#737373] hover:text-white">
+                <Camera className="w-5 h-5" />
+              </button>
+              <button className="bg-white text-black p-2.5 rounded-2xl hover:bg-[#e5e5e5] transition-all active:scale-95 shadow-lg group">
                 <Send className="w-4 h-4" />
               </button>
             </div>
           </div>
         </div>
+        <p className="text-center text-[10px] text-[#404040] mt-3">
+            v0 is an AI that helps you build interfaces.
+        </p>
       </div>
     </div>
   )
@@ -301,7 +324,7 @@ const PreviewInterface = () => {
                           transition={{ delay: i * 0.1, duration: 0.8 }}
                           className={cn(
                             "flex-1 rounded-t-lg transition-colors",
-                            h > 80 ? "bg-indigo-500/40 group-hover:bg-indigo-500/60" : "bg-white/10"
+                            h > 80 ? "bg-indigo-500/40" : "bg-white/10"
                           )}
                         />
                       ))}
@@ -399,3 +422,6 @@ export default function V0App() {
     </main>
   )
 }
+const Share2 = ({ className }: { className?: string }) => (
+    <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+)
