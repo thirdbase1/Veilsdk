@@ -69,11 +69,25 @@ const ModelIcon = ({ power, active = false }: { power: number; active?: boolean 
 const IntelligenceSelector = ({ value, onChange, align = "top" }: { value: string; onChange: (id: string) => void; align?: "top" | "bottom" }) => {
   const [open, setOpen] = useState(false)
   const current = MODELS.find(m => m.id === value) || MODELS[0]
+  
+  const getModelCapabilities = (modelId: string) => {
+    if (modelId.includes("trinity")) return ["Code Generation", "Architecture", "Large Context"]
+    if (modelId.includes("glm")) return ["Balance", "Speed", "Efficiency"]
+    if (modelId.includes("120b")) return ["Deep Analysis", "Complex Logic", "Best Quality"]
+    if (modelId.includes("nano")) return ["Fast Response", "Light Tasks", "Real-time"]
+    return []
+  }
+  
   return (
     <div className="relative">
-      <button onClick={() => setOpen(!open)} className="flex items-center space-x-1.5 text-[#666] hover:text-white transition-all group">
-        <Brain className="w-3.5 h-3.5" />
-        <ChevronDown className={cn("w-2.5 h-2.5 transition-transform duration-500", open && "rotate-180")} />
+      <button 
+        onClick={() => setOpen(!open)} 
+        className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-[#666] hover:text-white transition-all group hover:bg-white/5"
+        title="Select AI Model"
+      >
+        <Brain className="w-4 h-4" />
+        <span className="text-[12px] font-medium hidden sm:inline max-w-[120px] truncate">{current.name}</span>
+        <ChevronDown className={cn("w-3 h-3 transition-transform duration-300", open && "rotate-180")} />
       </button>
       <AnimatePresence>
         {open && (
@@ -84,17 +98,49 @@ const IntelligenceSelector = ({ value, onChange, align = "top" }: { value: strin
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: align === "top" ? -10 : 10 }}
               className={cn(
-                "absolute left-0 w-64 bg-[#0a0a0a] border border-white/10 rounded-[24px] shadow-[0_40px_80px_rgba(0,0,0,0.9)] z-[110] p-2 overflow-hidden",
+                "absolute left-0 w-72 bg-[#0a0a0a] border border-white/10 rounded-[24px] shadow-[0_40px_80px_rgba(0,0,0,0.9)] z-[110] p-3 overflow-hidden",
                 align === "top" ? "bottom-full mb-3" : "top-full mt-3"
               )}
             >
-              <div className="px-4 py-3 text-[10px] text-[#333] font-black uppercase tracking-[0.3em]">Compute Engine</div>
-              {MODELS.map(m => (
-                <button key={m.id} onClick={() => { onChange(m.id); setOpen(false) }} className={cn("w-full flex items-center space-x-4 px-4 py-3 rounded-xl transition-all text-[13px]", value === m.id ? "bg-white/10 text-white" : "text-[#444] hover:bg-white/5 hover:text-[#888]")}>
-                  <ModelIcon power={m.power} active={value === m.id} />
-                  <span className="font-bold">{m.name}</span>
-                </button>
-              ))}
+              <div className="px-3 py-2 text-[10px] text-[#555] font-black uppercase tracking-[0.3em] mb-1">Intelligence Models</div>
+              {MODELS.map((m, idx) => {
+                const caps = getModelCapabilities(m.id)
+                const isActive = value === m.id
+                return (
+                  <button 
+                    key={m.id} 
+                    onClick={() => { onChange(m.id); setOpen(false) }} 
+                    className={cn(
+                      "w-full flex flex-col items-start space-y-1.5 px-3 py-2.5 rounded-lg transition-all mb-1",
+                      isActive 
+                        ? "bg-gradient-to-r from-white/15 to-white/5 border border-white/20" 
+                        : "hover:bg-white/5 border border-transparent"
+                    )}
+                  >
+                    <div className="flex items-center space-x-2.5 w-full">
+                      <ModelIcon power={m.power} active={isActive} />
+                      <span className={cn("font-bold text-sm", isActive ? "text-white" : "text-[#999]")}>
+                        {m.name}
+                      </span>
+                      <span className={cn("text-[10px] px-2 py-0.5 rounded-full ml-auto", 
+                        isActive ? "bg-white/20 text-white" : "bg-white/5 text-[#666]"
+                      )}>
+                        Power: {m.power === 3 ? "High" : "Standard"}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {caps.map(cap => (
+                        <span key={cap} className={cn(
+                          "text-[10px] px-1.5 py-0.5 rounded",
+                          isActive ? "bg-white/10 text-white/80" : "bg-white/5 text-[#666]"
+                        )}>
+                          {cap}
+                        </span>
+                      ))}
+                    </div>
+                  </button>
+                )
+              })}
             </motion.div>
           </>
         )}
@@ -168,51 +214,95 @@ export default function OpenBrainyApp() {
       })
 
       if (!response.body) return
-      const reader = response.body.getReader(); const decoder = new TextDecoder(); let assistantContent = ""
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let assistantContent = ""
+      let currentFiles = [...(activeSession?.files || [])]
+      let lastSyncTime = Date.now()
 
+      // Add empty assistant message for streaming
       store.addMessage(sessionId, { role: "assistant", content: "" })
 
       while (true) {
-        const { value, done } = await reader.read(); if (done) break
-        assistantContent += decoder.decode(value)
+        const { value, done } = await reader.read()
+        if (done) break
+        
+        const chunk = decoder.decode(value)
+        assistantContent += chunk
 
+        // Extract thinking and clean content
         const thinkingMatch = assistantContent.match(/<thinking>([\s\S]*?)<\/thinking>/)
         const thinking = thinkingMatch ? thinkingMatch[1].trim() : undefined
         const cleanContent = assistantContent.replace(/<thinking>[\s\S]*?<\/thinking>/, "").trim()
 
-        store.updateSession(sessionId, {
-            messages: [
-                ...store.sessions.find(s => s.id === sessionId)!.messages.slice(0, -1),
-                { role: "assistant", content: cleanContent, thinking }
-            ]
-        })
-      }
+        // Update message in real-time
+        store.updateLastMessage(
+          sessionId,
+          () => cleanContent,
+          () => thinking
+        )
 
-      // Sync codebase
-      const fileOps = Array.from(assistantContent.matchAll(/--- FILE: (.*?) ---\n([\s\S]*?)\n--- END ---/g))
-      const deleteOps = Array.from(assistantContent.matchAll(/--- DELETE: (.*?) ---/g))
-      let newFiles = [...(activeSession?.files || [])]
-      let changed = false
+        // Real-time file operations parsing
+        const fileOps = Array.from(assistantContent.matchAll(/--- FILE: (.*?) ---\n([\s\S]*?)\n--- END ---/g))
+        const deleteOps = Array.from(assistantContent.matchAll(/--- DELETE: (.*?) ---/g))
 
-      for (const op of fileOps) {
-          const path = op[1].trim(); const content = op[2].trim()
+        let newFiles = [...currentFiles]
+        let hasFileChanges = false
+
+        // Apply file operations
+        for (const op of fileOps) {
+          const path = op[1].trim()
+          const content = op[2].trim()
           const idx = newFiles.findIndex(f => f.path === path)
-          if (idx !== -1) newFiles[idx].content = content; else newFiles.push({ path, content })
-          changed = true
-      }
-      for (const op of deleteOps) {
-          const path = op[1].trim(); newFiles = newFiles.filter(f => f.path !== path); changed = true
-      }
+          if (idx !== -1) {
+            newFiles[idx].content = content
+          } else {
+            newFiles.push({ path, content })
+          }
+          hasFileChanges = true
+        }
 
-      if (changed) {
+        for (const op of deleteOps) {
+          const path = op[1].trim()
+          newFiles = newFiles.filter(f => f.path !== path)
+          hasFileChanges = true
+        }
+
+        // Sync files in real-time (throttled to every 2 seconds)
+        if (hasFileChanges && Date.now() - lastSyncTime > 2000) {
+          currentFiles = newFiles
           store.updateFiles(sessionId, newFiles)
           await syncSandbox(sessionId, newFiles)
+          lastSyncTime = Date.now()
+        }
+      }
+
+      // Final sync after streaming ends
+      const finalFileOps = Array.from(assistantContent.matchAll(/--- FILE: (.*?) ---\n([\s\S]*?)\n--- END ---/g))
+      const finalDeleteOps = Array.from(assistantContent.matchAll(/--- DELETE: (.*?) ---/g))
+      let finalFiles = [...currentFiles]
+      let finalChanged = false
+
+      for (const op of finalFileOps) {
+          const path = op[1].trim(); const content = op[2].trim()
+          const idx = finalFiles.findIndex(f => f.path === path)
+          if (idx !== -1) finalFiles[idx].content = content; else finalFiles.push({ path, content })
+          finalChanged = true
+      }
+      for (const op of finalDeleteOps) {
+          const path = op[1].trim(); finalFiles = finalFiles.filter(f => f.path !== path); finalChanged = true
+      }
+
+      if (finalChanged) {
+          currentFiles = finalFiles
+          store.updateFiles(sessionId, finalFiles)
+          await syncSandbox(sessionId, finalFiles)
 
           // Trigger Review
           setTaskStatus("Senior Review...")
           const reviewRes = await fetch("/api/review", {
             method: "POST",
-            body: JSON.stringify({ prompt: promptValue, files: newFiles }),
+            body: JSON.stringify({ prompt: promptValue, files: finalFiles }),
           })
           const reviewData = await reviewRes.json()
           if (reviewData.review) {
