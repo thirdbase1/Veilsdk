@@ -1,24 +1,37 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from "react"
-import hljs from 'highlight.js'
-import 'highlight.js/styles/atom-one-dark.css'
 import {
   Plus,
   Send,
   ChevronDown,
+  ArrowRight,
   Monitor,
   Smartphone,
+  Code2,
+  Terminal,
   Loader2,
   Zap,
+  User,
   MessageSquare,
+  Sparkles,
+  BrainCircuit,
   Brain,
   FileCode,
+  FolderOpen,
+  Search,
+  Layout,
+  Layers,
+  ArrowUpRight,
   ShieldCheck,
   Mic,
+  Image as ImageIcon,
   Menu,
+  Settings,
+  Share2,
   AlertTriangle,
   X,
+  History,
   Trash2,
   Square
 } from "lucide-react"
@@ -29,11 +42,18 @@ import { useBrainyStore, Message, FileItem } from "@/lib/store"
 // --- Constants ---
 
 const MODELS = [
-  { id: "x-ai/grok-code-fast-1", name: "Grok Code Fast", power: 3 },
   { id: "arcee-ai/trinity-large-preview:free", name: "Trinity Large", power: 3 },
   { id: "z-ai/glm-4.5-air:free", name: "GLM 4.5 Air", power: 3 },
   { id: "nvidia/nemotron-3-super-120b-a12b:free", name: "Nemotron 120B", power: 3 },
+  { id: "x-ai/grok-2-1212", name: "Grok 2", power: 3 },
   { id: "nvidia/nemotron-nano-9b-v2:free", name: "Nemotron Nano", power: 1 },
+]
+
+const QUICK_STARTS = [
+  "Build a SaaS landing page with Tailwind",
+  "Create an AI analytics dashboard",
+  "Build a multi-step component form",
+  "Create a personal portfolio site"
 ]
 
 // --- Atomic Components ---
@@ -47,58 +67,14 @@ const ModelIcon = ({ power, active = false }: { power: number; active?: boolean 
   )
 }
 
-const CodePreview = ({ content }: { content: string }) => {
-  const [highlightedCode, setHighlightedCode] = React.useState("")
-  
-  React.useEffect(() => {
-    if (content) {
-      try {
-        // Auto-detect language based on common patterns
-        let language = "plaintext"
-        if (content.includes("function ") || content.includes("const ") || content.includes("=>")) language = "javascript"
-        if (content.includes("import") || content.includes("export")) language = "javascript"
-        if (content.includes("<") && content.includes(">")) language = "jsx"
-        if (content.includes("class ") || content.includes("def ")) language = "python"
-        if (content.includes("@") && content.includes("interface")) language = "typescript"
-        
-        const highlighted = hljs.highlight(content, { language, ignoreIllegals: true }).value
-        setHighlightedCode(highlighted)
-      } catch {
-        setHighlightedCode(content)
-      }
-    }
-  }, [content])
-
-  return (
-    <pre className="whitespace-pre-wrap text-[13px] leading-[1.6]">
-      <code dangerouslySetInnerHTML={{ __html: highlightedCode }} />
-    </pre>
-  )
-}
-
 const IntelligenceSelector = ({ value, onChange, align = "top" }: { value: string; onChange: (id: string) => void; align?: "top" | "bottom" }) => {
   const [open, setOpen] = useState(false)
   const current = MODELS.find(m => m.id === value) || MODELS[0]
-  
-  const getModelCapabilities = (modelId: string) => {
-    if (modelId.includes("grok")) return ["Code Expert", "Fast Response", "Real-time"]
-    if (modelId.includes("trinity")) return ["Code Generation", "Architecture", "Large Context"]
-    if (modelId.includes("glm")) return ["Balance", "Speed", "Efficiency"]
-    if (modelId.includes("120b")) return ["Deep Analysis", "Complex Logic", "Best Quality"]
-    if (modelId.includes("nano")) return ["Fast Response", "Light Tasks", "Real-time"]
-    return []
-  }
-  
   return (
     <div className="relative">
-      <button 
-        onClick={() => setOpen(!open)} 
-        className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-[#666] hover:text-white transition-all group hover:bg-white/5"
-        title="Select AI Model"
-      >
-        <Brain className="w-4 h-4" />
-        <span className="text-[12px] font-medium hidden sm:inline max-w-[120px] truncate">{current.name}</span>
-        <ChevronDown className={cn("w-3 h-3 transition-transform duration-300", open && "rotate-180")} />
+      <button onClick={() => setOpen(!open)} className="flex items-center space-x-1.5 text-[#666] hover:text-white transition-all group">
+        <Brain className="w-3.5 h-3.5" />
+        <ChevronDown className={cn("w-2.5 h-2.5 transition-transform duration-500", open && "rotate-180")} />
       </button>
       <AnimatePresence>
         {open && (
@@ -109,49 +85,17 @@ const IntelligenceSelector = ({ value, onChange, align = "top" }: { value: strin
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: align === "top" ? -10 : 10 }}
               className={cn(
-                "absolute left-0 w-72 bg-[#0a0a0a] border border-white/10 rounded-[24px] shadow-[0_40px_80px_rgba(0,0,0,0.9)] z-[110] p-3 overflow-hidden",
+                "absolute left-0 w-64 bg-[#0a0a0a] border border-white/10 rounded-[24px] shadow-[0_40px_80px_rgba(0,0,0,0.9)] z-[110] p-2 overflow-hidden",
                 align === "top" ? "bottom-full mb-3" : "top-full mt-3"
               )}
             >
-              <div className="px-3 py-2 text-[10px] text-[#555] font-black uppercase tracking-[0.3em] mb-1">Intelligence Models</div>
-              {MODELS.map((m) => {
-                const caps = getModelCapabilities(m.id)
-                const isActive = value === m.id
-                return (
-                  <button 
-                    key={m.id} 
-                    onClick={() => { onChange(m.id); setOpen(false) }} 
-                    className={cn(
-                      "w-full flex flex-col items-start space-y-1.5 px-3 py-2.5 rounded-lg transition-all mb-1",
-                      isActive 
-                        ? "bg-gradient-to-r from-white/15 to-white/5 border border-white/20" 
-                        : "hover:bg-white/5 border border-transparent"
-                    )}
-                  >
-                    <div className="flex items-center space-x-2.5 w-full">
-                      <ModelIcon power={m.power} active={isActive} />
-                      <span className={cn("font-bold text-sm", isActive ? "text-white" : "text-[#999]")}>
-                        {m.name}
-                      </span>
-                      <span className={cn("text-[10px] px-2 py-0.5 rounded-full ml-auto", 
-                        isActive ? "bg-white/20 text-white" : "bg-white/5 text-[#666]"
-                      )}>
-                        Power: {m.power === 3 ? "High" : "Standard"}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {caps.map(cap => (
-                        <span key={cap} className={cn(
-                          "text-[10px] px-1.5 py-0.5 rounded",
-                          isActive ? "bg-white/10 text-white/80" : "bg-white/5 text-[#666]"
-                        )}>
-                          {cap}
-                        </span>
-                      ))}
-                    </div>
-                  </button>
-                )
-              })}
+              <div className="px-4 py-3 text-[10px] text-[#333] font-black uppercase tracking-[0.3em]">Compute Engine</div>
+              {MODELS.map(m => (
+                <button key={m.id} onClick={() => { onChange(m.id); setOpen(false) }} className={cn("w-full flex items-center space-x-4 px-4 py-3 rounded-xl transition-all text-[13px]", value === m.id ? "bg-white/10 text-white" : "text-[#444] hover:bg-white/5 hover:text-[#888]")}>
+                  <ModelIcon power={m.power} active={value === m.id} />
+                  <span className="font-bold">{m.name}</span>
+                </button>
+              ))}
             </motion.div>
           </>
         )}
@@ -168,7 +112,7 @@ export default function OpenBrainyApp() {
 
   // Local UI State
   const [input, setInput] = useState("")
-  const [model, setModel] = useState(MODELS[0].id) // Default to Grok Code Fast
+  const [model, setModel] = useState(MODELS[1].id) // Default to GLM 4.5 Air
   const [isGenerating, setIsGenerating] = useState(false)
   const [taskStatus, setTaskStatus] = useState<string | null>(null)
   const [workspaceTab, setWorkspaceTab] = useState<"preview" | "code">("preview")
@@ -225,95 +169,57 @@ export default function OpenBrainyApp() {
       })
 
       if (!response.body) return
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let assistantContent = ""
-      let currentFiles = [...(activeSession?.files || [])]
-      let lastSyncTime = Date.now()
+      const reader = response.body.getReader(); const decoder = new TextDecoder(); let assistantContent = ""
 
-      // Add empty assistant message for streaming
       store.addMessage(sessionId, { role: "assistant", content: "" })
 
       while (true) {
-        const { value, done } = await reader.read()
-        if (done) break
-        
-        const chunk = decoder.decode(value)
-        assistantContent += chunk
+        const { value, done } = await reader.read(); if (done) break
+        assistantContent += decoder.decode(value)
 
-        // Extract thinking and clean content
         const thinkingMatch = assistantContent.match(/<thinking>([\s\S]*?)<\/thinking>/)
         const thinking = thinkingMatch ? thinkingMatch[1].trim() : undefined
-        const cleanContent = assistantContent.replace(/<thinking>[\s\S]*?<\/thinking>/, "").trim()
 
-        // Update message in real-time
-        store.updateLastMessage(
-          sessionId,
-          () => cleanContent,
-          () => thinking || ""
-        )
+        // Remove thinking block AND any multi-file protocol blocks from visible chat
+        let cleanContent = assistantContent
+            .replace(/<thinking>[\s\S]*?<\/thinking>/g, "")
+            .replace(/--- FILE: [\s\S]*? ---[\s\S]*?--- END ---/g, "")
+            .replace(/--- DELETE: [\s\S]*? ---/g, "")
+            .trim()
 
-        // Real-time file operations parsing
-        const fileOps = Array.from(assistantContent.matchAll(/--- FILE: (.*?) ---\n([\s\S]*?)\n--- END ---/g))
-        const deleteOps = Array.from(assistantContent.matchAll(/--- DELETE: (.*?) ---/g))
+        store.updateSession(sessionId, {
+            messages: [
+                ...store.sessions.find(s => s.id === sessionId)!.messages.slice(0, -1),
+                { role: "assistant", content: cleanContent, thinking }
+            ]
+        })
+      }
 
-        let newFiles = [...currentFiles]
-        let hasFileChanges = false
+      // Sync codebase
+      const fileOps = Array.from(assistantContent.matchAll(/--- FILE: (.*?) ---\n([\s\S]*?)\n--- END ---/g))
+      const deleteOps = Array.from(assistantContent.matchAll(/--- DELETE: (.*?) ---/g))
+      let newFiles = [...(activeSession?.files || [])]
+      let changed = false
 
-        // Apply file operations
-        for (const op of fileOps) {
-          const path = op[1].trim()
-          const content = op[2].trim()
+      for (const op of fileOps) {
+          const path = op[1].trim(); const content = op[2].trim()
           const idx = newFiles.findIndex(f => f.path === path)
-          if (idx !== -1) {
-            newFiles[idx].content = content
-          } else {
-            newFiles.push({ path, content })
-          }
-          hasFileChanges = true
-        }
+          if (idx !== -1) newFiles[idx].content = content; else newFiles.push({ path, content })
+          changed = true
+      }
+      for (const op of deleteOps) {
+          const path = op[1].trim(); newFiles = newFiles.filter(f => f.path !== path); changed = true
+      }
 
-        for (const op of deleteOps) {
-          const path = op[1].trim()
-          newFiles = newFiles.filter(f => f.path !== path)
-          hasFileChanges = true
-        }
-
-        // Sync files in real-time (throttled to every 2 seconds)
-        if (hasFileChanges && Date.now() - lastSyncTime > 2000) {
-          currentFiles = newFiles
+      if (changed) {
           store.updateFiles(sessionId, newFiles)
           await syncSandbox(sessionId, newFiles)
-          lastSyncTime = Date.now()
-        }
-      }
-
-      // Final sync after streaming ends
-      const finalFileOps = Array.from(assistantContent.matchAll(/--- FILE: (.*?) ---\n([\s\S]*?)\n--- END ---/g))
-      const finalDeleteOps = Array.from(assistantContent.matchAll(/--- DELETE: (.*?) ---/g))
-      let finalFiles = [...currentFiles]
-      let finalChanged = false
-
-      for (const op of finalFileOps) {
-          const path = op[1].trim(); const content = op[2].trim()
-          const idx = finalFiles.findIndex(f => f.path === path)
-          if (idx !== -1) finalFiles[idx].content = content; else finalFiles.push({ path, content })
-          finalChanged = true
-      }
-      for (const op of finalDeleteOps) {
-          const path = op[1].trim(); finalFiles = finalFiles.filter(f => f.path !== path); finalChanged = true
-      }
-
-      if (finalChanged) {
-          currentFiles = finalFiles
-          store.updateFiles(sessionId, finalFiles)
-          await syncSandbox(sessionId, finalFiles)
 
           // Trigger Review
           setTaskStatus("Senior Review...")
           const reviewRes = await fetch("/api/review", {
             method: "POST",
-            body: JSON.stringify({ prompt: promptValue, files: finalFiles }),
+            body: JSON.stringify({ prompt: promptValue, files: newFiles }),
           })
           const reviewData = await reviewRes.json()
           if (reviewData.review) {
@@ -321,9 +227,8 @@ export default function OpenBrainyApp() {
           }
       }
 
-    } catch (e) {
-        const error = e as Error;
-        console.error(error)
+    } catch (e: any) {
+        console.error(e)
     } finally {
       setIsGenerating(false)
       setTaskStatus(null)
@@ -340,23 +245,20 @@ export default function OpenBrainyApp() {
   }
 
   const startVoice = () => {
-    const SpeechRecognition = (window as unknown as Record<string, unknown>).webkitSpeechRecognition || (window as unknown as Record<string, unknown>).SpeechRecognition
-    if (!SpeechRecognition) {
+    if (!('webkitSpeechRecognition' in window)) {
         alert("Voice recognition not supported in this browser.")
         return
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const recognition = new (SpeechRecognition as any)()
+    const recognition = new (window as any).webkitSpeechRecognition()
     recognition.continuous = false
     recognition.interimResults = false
     recognition.lang = "en-US"
 
     recognition.onstart = () => setIsListening(true)
     recognition.onend = () => setIsListening(false)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onresult = (event: any) => {
         const text = event.results[0][0].transcript
-        setInput((prev: string) => prev + (prev ? " " : "") + text)
+        setInput(prev => prev + (prev ? " " : "") + text)
     }
     recognition.start()
   }
@@ -368,11 +270,10 @@ export default function OpenBrainyApp() {
         method: "POST",
         body: JSON.stringify({ files: codebase, sandboxName: `ob-ws-${id.slice(0,8)}` }),
       })
-      const data = await res.json() as Record<string, string>;
+      const data = await res.json()
       if (data.url) setSandboxUrl(data.url)
-    } catch (e) {
-        const error = e as Error;
-        console.error(error)
+    } catch (e: any) {
+        console.error(e)
     } finally {
         setTaskStatus(null)
     }
@@ -567,42 +468,17 @@ export default function OpenBrainyApp() {
                     </div>
                     <div className={cn("text-[14px] leading-relaxed whitespace-pre-wrap max-w-full", m.role === "user" ? "text-white" : "text-[#aaa]")}>
                         {m.thinking && (
-                            <div className={cn("mb-4 border-l-2 pl-4", isGenerating && i === activeSession.messages.length - 1 ? "border-l-blue-400 bg-blue-500/5" : "border-l-white/10 bg-white/5")} >
-                                <div className="flex items-center space-x-2 mb-2">
-                                    <div className="flex space-x-1">
-                                        {isGenerating && i === activeSession.messages.length - 1 && (
-                                            <>
-                                                <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
-                                                <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse [animation-delay:0.2s]" />
-                                            </>
-                                        )}
-                                    </div>
-                                    <span className={cn("text-[11px] font-black uppercase tracking-widest", isGenerating && i === activeSession.messages.length - 1 ? "text-blue-300" : "text-[#666]")}>
-                                        💭 Reasoning
-                                    </span>
-                                </div>
-                                <div className="text-[12px] text-[#888] leading-relaxed font-mono">
+                            <details className="mb-4 group">
+                                <summary className="list-none cursor-pointer flex items-center space-x-2 text-[11px] text-[#555] font-black uppercase tracking-widest hover:text-[#888] transition-colors">
+                                    <BrainCircuit className="w-3 h-3" />
+                                    <span>Thought Process</span>
+                                </summary>
+                                <div className="mt-3 bg-[#0f0f0f] border border-white/5 rounded-xl p-4 text-[12px] text-[#666] italic leading-relaxed">
                                     {m.thinking}
-                                    {isGenerating && i === activeSession.messages.length - 1 && (
-                                        <span className="inline-block w-1.5 h-4 ml-1 bg-blue-400/60 animate-pulse" />
-                                    )}
                                 </div>
-                            </div>
+                            </details>
                         )}
-                        {m.content ? (
-                          <div className="group relative">
-                            <div className="text-white">{m.content}</div>
-                            {isGenerating && i === activeSession.messages.length - 1 && (
-                              <span className="inline-block w-2 h-5 ml-1 bg-white/60 animate-pulse" />
-                            )}
-                          </div>
-                        ) : isGenerating && i === activeSession.messages.length - 1 ? (
-                          <div className="flex space-x-1.5 py-1">
-                            <div className="w-2 h-2 bg-white/40 rounded-full animate-bounce" />
-                            <div className="w-2 h-2 bg-white/40 rounded-full animate-bounce [animation-delay:0.2s]" />
-                            <div className="w-2 h-2 bg-white/40 rounded-full animate-bounce [animation-delay:0.4s]" />
-                          </div>
-                        ) : null}
+                        {m.content || (isGenerating && i === activeSession.messages.length - 1 && <div className="flex space-x-1 py-1"><div className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce" /><div className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce [animation-delay:0.2s]" /></div>)}
                     </div>
                 </div>
             ))}
@@ -682,30 +558,9 @@ export default function OpenBrainyApp() {
                                 <iframe src={sandboxUrl} className="w-full h-full border-none" />
                             </div>
                         ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center p-8 bg-gradient-to-b from-transparent via-blue-500/5 to-transparent">
-                                <div className="max-w-2xl w-full space-y-4">
-                                    <div className="flex items-center space-x-2">
-                                        <div className="flex space-x-1">
-                                            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-                                            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse [animation-delay:0.2s]" />
-                                            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse [animation-delay:0.4s]" />
-                                        </div>
-                                        <span className="text-sm text-blue-300/70 font-semibold">Reasoning in progress...</span>
-                                    </div>
-                                    <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-2 min-h-[120px]">
-                                        {activeSession.messages.length > 0 && activeSession.messages[activeSession.messages.length - 1]?.thinking ? (
-                                            <div className="text-sm text-white/70 leading-relaxed whitespace-pre-wrap font-mono text-xs">
-                                                <span className="text-blue-300/80 font-semibold">💭 Thinking: </span>
-                                                {activeSession.messages[activeSession.messages.length - 1].thinking}
-                                            </div>
-                                        ) : (
-                                            <div className="text-white/40 text-sm italic">AI is analyzing your request and reasoning through the solution...</div>
-                                        )}
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-[11px] text-white/30 uppercase tracking-wider">Generating code & files...</p>
-                                    </div>
-                                </div>
+                            <div className="flex flex-col items-center space-y-6 opacity-20 text-white">
+                                <Layers className="w-16 h-16" />
+                                <span className="text-[10px] font-black uppercase tracking-[0.5em]">Awaiting Generation</span>
                             </div>
                         )}
                     </motion.div>
@@ -717,43 +572,24 @@ export default function OpenBrainyApp() {
                             </div>
                             <div className="flex-1 flex overflow-hidden">
                                 <div className="hidden lg:block w-48 border-r border-white/10 p-3 space-y-1 overflow-auto bg-[#080808]">
-                                    {activeSession.files.map((f) => (
+                                    {activeSession.files.map((f, idx) => (
                                         <div
                                           key={f.path}
                                           onClick={() => setActiveFile(f.path)}
                                           className={cn(
-                                            "flex items-center space-x-2 px-3 py-2 rounded-lg text-[11px] font-bold transition-all truncate cursor-pointer relative group",
-                                            activeFile === f.path ? "bg-white/10 text-white" : "text-[#444] hover:bg-white/5 hover:text-[#888]"
+                                            "flex items-center space-x-2 px-3 py-2 rounded-lg text-[11px] font-bold transition-all truncate cursor-pointer",
+                                            (activeFile === f.path || (!activeFile && idx === 0)) ? "bg-white/10 text-white" : "text-[#444] hover:bg-white/5 hover:text-[#888]"
                                           )}
                                         >
                                             <FileCode className="w-3.5 h-3.5" />
-                                            <span className="truncate flex-1">{f.path.split('/').pop()}</span>
-                                            {isGenerating && (
-                                              <span className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse shrink-0" title="Updating..." />
-                                            )}
+                                            <span>{f.path.split('/').pop()}</span>
                                         </div>
                                     ))}
                                 </div>
-                                <div className="flex-1 flex flex-col overflow-hidden bg-[#0d1117]">
-                                    <div className="flex-1 p-6 overflow-auto font-mono">
-                                        {activeSession.files.find(f => f.path === (activeFile || activeSession.files[0]?.path))?.content ? (
-                                          <CodePreview content={activeSession.files.find(f => f.path === (activeFile || activeSession.files[0]?.path))?.content || ""} />
-                                        ) : (
-                                          <div className="text-[#888] text-[13px] italic">{"// Select a file to view code."}</div>
-                                        )}
-                                    </div>
-                                    {isGenerating && (
-                                      <div className="border-t border-white/5 px-6 py-2 bg-gradient-to-r from-cyan-500/10 via-transparent to-transparent">
-                                        <div className="flex items-center space-x-2">
-                                          <div className="flex space-x-1">
-                                            <div className="w-1 h-1 bg-cyan-400 rounded-full animate-pulse" />
-                                            <div className="w-1 h-1 bg-cyan-400 rounded-full animate-pulse [animation-delay:0.1s]" />
-                                            <div className="w-1 h-1 bg-cyan-400 rounded-full animate-pulse [animation-delay:0.2s]" />
-                                          </div>
-                                          <span className="text-[10px] text-cyan-400/70 font-bold">Live Update</span>
-                                        </div>
-                                      </div>
-                                    )}
+                                <div className="flex-1 p-6 overflow-auto font-mono text-[13px] leading-[1.6] text-[#888]">
+                                    <pre className="whitespace-pre-wrap">
+                                        {activeSession.files.find(f => f.path === (activeFile || activeSession.files[0]?.path))?.content || "// Select a file to view code."}
+                                    </pre>
                                 </div>
                             </div>
                         </div>
