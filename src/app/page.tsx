@@ -43,6 +43,7 @@ import { useBrainyStore, Message, FileItem } from "@/lib/store"
 // --- Constants ---
 
 const MODELS = [
+  { id: "x-ai/grok-code-fast-1", name: "Grok Code Fast", power: 3 },
   { id: "arcee-ai/trinity-large-preview:free", name: "Trinity Large", power: 3 },
   { id: "z-ai/glm-4.5-air:free", name: "GLM 4.5 Air", power: 3 },
   { id: "nvidia/nemotron-3-super-120b-a12b:free", name: "Nemotron 120B", power: 3 },
@@ -101,6 +102,7 @@ const IntelligenceSelector = ({ value, onChange, align = "top" }: { value: strin
   const current = MODELS.find(m => m.id === value) || MODELS[0]
   
   const getModelCapabilities = (modelId: string) => {
+    if (modelId.includes("grok")) return ["Code Expert", "Fast Response", "Real-time"]
     if (modelId.includes("trinity")) return ["Code Generation", "Architecture", "Large Context"]
     if (modelId.includes("glm")) return ["Balance", "Speed", "Efficiency"]
     if (modelId.includes("120b")) return ["Deep Analysis", "Complex Logic", "Best Quality"]
@@ -187,7 +189,7 @@ export default function OpenBrainyApp() {
 
   // Local UI State
   const [input, setInput] = useState("")
-  const [model, setModel] = useState(MODELS[1].id) // Default to GLM 4.5 Air
+  const [model, setModel] = useState(MODELS[0].id) // Default to Grok Code Fast
   const [isGenerating, setIsGenerating] = useState(false)
   const [taskStatus, setTaskStatus] = useState<string | null>(null)
   const [workspaceTab, setWorkspaceTab] = useState<"preview" | "code">("preview")
