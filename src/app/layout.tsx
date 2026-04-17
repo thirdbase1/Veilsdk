@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "v0 Demo - AI Analytics Platform",
-  description: "A premium AI-powered interface for building and deploying dashboards.",
+  title: "Open Brainy - Full-Stack AI Engineer",
+  description: "A professional AI-powered platform for building and deploying full-stack applications.",
 };
 
 export default function RootLayout({

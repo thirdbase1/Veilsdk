@@ -1,66 +1,49 @@
-# v0 Pro - AI Interface Builder
+# Open Brainy - Full-Stack AI Engineer
 
-A high-fidelity, production-ready clone of the **v0.dev** platform. This project enables developers to generate, preview, and deploy React components using a conversational AI interface powered by **OpenRouter** and **Vercel Sandbox**.
+Open Brainy is a high-fidelity, industrial-grade AI platform for generating, executing, and reviewing full-stack web applications. Unlike traditional UI builders, Open Brainy maintains full codebase awareness and executes code in isolated, high-performance Vercel Sandbox environments.
 
-## 🚀 Live Features
+## 🚀 Key Capabilities
 
-- **Generative UI:** Describe any component and watch it come to life with Next.js and Tailwind CSS.
-- **Compute-Native Previews:** Unlike static mocks, this app uses the **Vercel Sandbox SDK** to run your code in real-time on isolated Firecracker microVMs.
-- **Model Intelligence:** Select from a curated list of OpenRouter free models. The interface scales model icons based on their "power" (Gemini Flash → Llama 70B).
-- **Self-Healing Loop:** Automatically captures build/runtime errors from the sandbox and feeds them back to the AI for an instantaneous "Auto-fix".
-- **Dual-AI Architecture:** Every generation is critiqued by a "Reviewer AI" to ensure it matches your prompt and follows UX best practices.
-- **Persistent Workspace:** Your code and conversation history are saved locally, ensuring a seamless workflow.
-
-## 🛠️ Tech Stack
-
-- **Framework:** Next.js 15 (App Router)
-- **Styling:** Tailwind CSS v4
-- **Animations:** Framer Motion
-- **Icons:** Lucide React
-- **Compute:** Vercel Sandbox
-- **LLM API:** OpenRouter
+- **Full-Stack Awareness:** Generates multi-file projects including API routes, server actions, and shared components.
+- **Compute-Native Execution:** Leverages the **Vercel Sandbox SDK** to boot real-time Firecracker microVMs for every project.
+- **Self-Healing Loop:** Automatically detects sandbox build/runtime errors and re-prompts the AI for immediate architectural correction.
+- **Dual-Agent Architecture:** Features a Lead AI Engineer (OpenRouter models) and a Senior Architectural Reviewer (Llama 3.3 70B) for rigorous quality control.
+- **Multi-Framework Ready:** Defaults to Next.js 15, but capable of handling any framework deployable to Vercel (SvelteKit, Astro, etc.).
+- **Premium Industrial UI:** Built with Tailwind CSS v4, Framer Motion, and a strict "Pro Dark" aesthetic.
 
 ## 📋 Prerequisites
 
-To run this project locally, you will need:
-1. An **OpenRouter API Key** (Get it at [openrouter.ai](https://openrouter.ai/keys))
-2. A **Vercel OIDC Token** (Follow the [Vercel Sandbox Auth Guide](https://vercel.com/docs/vercel-sandbox/authentication))
+1. **OpenRouter API Key:** Required for LLM streaming ([openrouter.ai](https://openrouter.ai/keys)).
+2. **Vercel OIDC Token:** Required for authenticated sandbox compute ([Vercel Sandbox Docs](https://vercel.com/docs/vercel-sandbox)).
 
-## ⚙️ Setup & Installation
+## ⚙️ Quick Start
 
-1. **Clone the repository:**
-   ```bash
-   git clone <repo-url>
-   cd v0-pro-clone
-   ```
-
-2. **Install dependencies:**
+1. **Install dependencies:**
    ```bash
    npm install
    ```
 
-3. **Configure Environment Variables:**
-   Create a `.env.local` file in the root directory:
+2. **Configure Environment:**
+   Create a `.env.local` file:
    ```env
-   OPENROUTER_API_KEY=your_openrouter_key
-   VERCEL_OIDC_TOKEN=your_vercel_oidc_token
+   OPENROUTER_API_KEY=your_key_here
+   VERCEL_OIDC_TOKEN=your_token_here
    ```
 
-4. **Start the development server:**
+3. **Run Platform:**
    ```bash
    npm run dev
    ```
 
-## 🧠 System Architecture
+## 🧠 System Protocol
 
-- **`api/chat`**: Handles streaming AI generations.
-- **`api/sandbox`**: Manages the lifecycle of Vercel microVMs, file synchronization, and command execution.
-- **`api/review`**: Triggers the secondary AI critique layer.
-- **`lib/prompts`**: Contains the professional-grade system prompts that guide the AI's behavior.
+- **`/api/chat`**: Streams generation with full-codebase context.
+- **`/api/sandbox`**: Orchestrates microVM lifecycle and file synchronization.
+- **`/api/review`**: Conducts post-generation architectural audits.
 
-## 🛡️ Authentication
+## 🛡️ Workspace Security
 
-For this demo, a simple email-based authentication barrier is implemented to protect compute resources. Data is persisted to the browser's Local Storage.
+All code execution happens in isolated Linux environments. Workspace state is persisted to the browser's Local Storage for a persistent, offline-first experience.
 
 ---
-*Built with precision to emulate the v0.dev professional experience.*
+*Open Brainy: Architecture. Execution. Excellence.*
