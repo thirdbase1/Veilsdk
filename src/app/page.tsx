@@ -26,6 +26,54 @@ import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { useBrainyStore, Message, FileItem } from "@/lib/store"
 
+// --- Types for Web Speech API ---
+
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+}
+
+interface SpeechRecognitionResultList {
+  readonly length: number;
+  item(index: number): SpeechRecognitionResult;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  readonly length: number;
+  item(index: number): SpeechRecognitionAlternative;
+  [index: number]: SpeechRecognitionAlternative;
+  isFinal: boolean;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onstart: (event: Event) => void;
+  onend: (event: Event) => void;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onerror: (event: Event) => void;
+  start(): void;
+  stop(): void;
+  abort(): void;
+}
+
+interface SpeechRecognitionConstructor {
+  new (): SpeechRecognition;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
+
 // --- Constants ---
 
 const MODELS = [
@@ -147,6 +195,11 @@ export default function OpenBrainyApp() {
         }),
       })
 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to connect to Brainy Engine.");
+      }
+
       if (!response.body) return
       const reader = response.body.getReader(); const decoder = new TextDecoder(); let assistantContent = ""
 
@@ -156,16 +209,16 @@ export default function OpenBrainyApp() {
         const { value, done } = await reader.read(); if (done) break
         assistantContent += decoder.decode(value)
 
-        const thinkingMatch = assistantContent.match(/<thinking>([\s\S]*?)<\/thinking>/)
+        const thinkingMatch = assistantContent.match(/<thinking>([\s\S]*?)(?:<\/thinking>|$)/)
         const thinking = thinkingMatch ? thinkingMatch[1].trim() : undefined
 
-        // Remove thinking block AND any multi-file protocol blocks from visible chat
+        // Robust cleaning for streaming and final content
         const cleanContent = assistantContent
-            .replace(/<thinking>[\s\S]*?<\/thinking>/g, "")
+            .replace(/<thinking>[\s\S]*?(?:<\/thinking>|$)/g, "")
             .replace(/💭 Reasoning[\s\S]*?(?=\n\n|\n---|$)/g, "")
-            .replace(/--- FILE: [\s\S]*? ---[\s\S]*?--- END ---/g, "")
+            .replace(/--- FILE: [\s\S]*? ---[\s\S]*?(?:--- END ---|$)/g, "")
             .replace(/--- DELETE: [\s\S]*? ---/g, "")
-            .replace(/```[\s\S]*?```/g, "") // Final safety: hide code blocks in chat
+            .replace(/```[\s\S]*?(?:```|$)/g, "")
             .trim()
 
         store.updateSession(sessionId, {
@@ -202,7 +255,7 @@ export default function OpenBrainyApp() {
             method: "POST",
             body: JSON.stringify({ prompt: promptValue, files: newFiles }),
           })
-          const reviewData = await reviewRes.json()
+          const reviewData = (await reviewRes.json()) as { review?: string };
           if (reviewData.review) {
             store.addMessage(sessionId, { role: "assistant", content: reviewData.review, thinking: "Senior Architectural Review Complete" })
           }
@@ -210,6 +263,13 @@ export default function OpenBrainyApp() {
 
     } catch (e: unknown) {
         console.error(e)
+        const error = e as Error;
+        if (error.name !== 'AbortError') {
+          store.addMessage(sessionId, {
+            role: "assistant",
+            content: `ERROR: ${error.message || "An unexpected error occurred."}`
+          })
+        }
     } finally {
       setIsGenerating(false)
       setTaskStatus(null)
@@ -226,7 +286,7 @@ export default function OpenBrainyApp() {
   }
 
   const startVoice = () => {
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
     if (!SpeechRecognition) {
         alert("Voice recognition not supported in this browser.")
         return
@@ -238,9 +298,9 @@ export default function OpenBrainyApp() {
 
     recognition.onstart = () => setIsListening(true)
     recognition.onend = () => setIsListening(false)
-    recognition.onresult = (event: { results: { transcript: string }[][] }) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
         const text = event.results[0][0].transcript
-        setInput(prev => prev + (prev ? " " : "") + text)
+        setInput((prev: string) => prev + (prev ? " " : "") + text)
     }
     recognition.start()
   }
@@ -252,7 +312,7 @@ export default function OpenBrainyApp() {
         method: "POST",
         body: JSON.stringify({ files: codebase, sandboxName: `ob-ws-${id.slice(0,8)}` }),
       })
-      const data = await res.json() as { url?: string };
+      const data = (await res.json()) as { url?: string };
       if (data.url) setSandboxUrl(data.url)
     } catch (e: unknown) {
         console.error(e)

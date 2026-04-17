@@ -17,14 +17,18 @@ interface ChatStreamChunk {
 }
 
 export async function POST(req: Request) {
-  const { messages, model, files } = await req.json();
+  const { messages, model, files } = (await req.json()) as {
+    messages: { role: "user" | "assistant" | "system"; content: string }[];
+    model?: string;
+    files?: { path: string; content: string }[];
+  };
 
   const openrouter = new OpenRouter({
-    apiKey: process.env.OPENROUTER_API_KEY,
+    apiKey: process.env.OPENROUTER_API_KEY || "",
   });
 
   const codebaseView = files && files.length > 0
-    ? `INDUSTRIAL CODEBASE STATE:\n${files.map((f: { path: string; content: string }) => `### FILE: ${f.path}\n${f.content}`).join("\n\n")}`
+    ? `INDUSTRIAL CODEBASE STATE:\n${files.map((f) => `### FILE: ${f.path}\n${f.content}`).join("\n\n")}`
     : "STATE: NEW_PROJECT_EMPTY";
 
   const systemMessage = `${GENERATOR_SYSTEM_PROMPT}\n\n${codebaseView}`;
@@ -38,11 +42,11 @@ export async function POST(req: Request) {
         ],
         stream: true,
     }
-  } as any);
+  });
 
   return new Response(
     new ReadableStream({
-      async start(controller) {
+      async start(controller: ReadableStreamDefaultController) {
         const encoder = new TextEncoder();
         try {
           const stream = response as unknown as AsyncIterable<ChatStreamChunk>;
@@ -60,7 +64,7 @@ export async function POST(req: Request) {
               }
             }
           } else {
-            const staticResponse = response as { choices: { message: { content: string } }[] };
+            const staticResponse = response as unknown as { choices: { message: { content: string } }[] };
             const text = staticResponse.choices?.[0]?.message?.content || "";
             controller.enqueue(encoder.encode(text));
           }

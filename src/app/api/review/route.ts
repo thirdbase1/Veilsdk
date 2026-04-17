@@ -10,13 +10,16 @@ const REVIEW_MODELS = [
 ];
 
 export async function POST(req: Request) {
-  const { prompt, files } = await req.json();
+  const { prompt, files } = (await req.json()) as {
+    prompt: string;
+    files: { path: string; content: string }[];
+  };
 
   const openrouter = new OpenRouter({
     apiKey: process.env.OPENROUTER_API_KEY,
   });
 
-  const codebaseStr = files.map((f: { path: string; content: string }) => `[${f.path}]\n${f.content}`).join("\n\n");
+  const codebaseStr = files.map((f) => `[${f.path}]\n${f.content}`).join("\n\n");
 
   for (const model of REVIEW_MODELS) {
     try {
@@ -27,6 +30,7 @@ export async function POST(req: Request) {
                 { role: "system", content: REVIEWER_SYSTEM_PROMPT },
                 { role: "user", content: `USER PROMPT: ${prompt}\n\nGENERATED CODEBASE:\n${codebaseStr}` }
             ],
+            stream: false,
         }
       }) as { choices: { message: { content: string } }[] };
 
