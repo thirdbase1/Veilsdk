@@ -34,6 +34,7 @@ interface BrainyState {
   updateSession: (id: string, updates: Partial<ChatSession>) => void
   setActiveSession: (id: string | null) => void
   addMessage: (sessionId: string, message: Message) => void
+  updateLastMessage: (sessionId: string, contentUpdate: (prev: string) => string, thinkingUpdate?: (prev?: string) => string) => void
   updateFiles: (sessionId: string, files: FileItem[]) => void
   clearAll: () => void
 }
@@ -76,6 +77,20 @@ export const useBrainyStore = create<BrainyState>()(
           sessions: state.sessions.map((s) =>
             s.id === sessionId ? { ...s, messages: [...s.messages, message] } : s
           ),
+        })),
+
+      updateLastMessage: (sessionId, contentUpdate, thinkingUpdate) =>
+        set((state) => ({
+          sessions: state.sessions.map((s) => {
+            if (s.id !== sessionId || s.messages.length === 0) return s
+            const lastMsg = s.messages[s.messages.length - 1]
+            const updatedMsg = {
+              ...lastMsg,
+              content: contentUpdate(lastMsg.content),
+              thinking: thinkingUpdate ? thinkingUpdate(lastMsg.thinking) : lastMsg.thinking,
+            }
+            return { ...s, messages: [...s.messages.slice(0, -1), updatedMsg] }
+          }),
         })),
 
       updateFiles: (sessionId, files) =>
