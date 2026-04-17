@@ -3,8 +3,29 @@ import { GENERATOR_SYSTEM_PROMPT } from "@/lib/prompts";
 
 export const dynamic = 'force-dynamic';
 
+interface FileItem {
+  path: string;
+  content: string;
+}
+
+interface ChatMessage {
+  role: "user" | "assistant" | "system";
+  content: string;
+}
+
+interface ChunkChoice {
+  delta?: {
+    content?: string;
+    reasoning?: string;
+  };
+}
+
+interface StreamChunk {
+  choices?: ChunkChoice[];
+}
+
 export async function POST(req: Request) {
-  const { messages, model, files } = await req.json();
+  const { messages, model, files } = await req.json() as { messages: ChatMessage[]; model: string; files: FileItem[] };
 
   console.log("[v0] Chat API called with model:", model);
   console.log("[v0] Messages count:", messages.length);
@@ -15,7 +36,7 @@ export async function POST(req: Request) {
   });
 
   const codebaseView = files && files.length > 0
-    ? `INDUSTRIAL CODEBASE STATE:\n${files.map((f: any) => `### FILE: ${f.path}\n${f.content}`).join("\n\n")}`
+    ? `INDUSTRIAL CODEBASE STATE:\n${files.map((f: FileItem) => `### FILE: ${f.path}\n${f.content}`).join("\n\n")}`
     : "STATE: NEW_PROJECT_EMPTY";
 
   const systemMessage = `${GENERATOR_SYSTEM_PROMPT}\n\n${codebaseView}`;
@@ -23,13 +44,15 @@ export async function POST(req: Request) {
   try {
     console.log("[v0] Creating OpenRouter stream with model:", model);
     
-    const stream = await openrouter.chat.complete({
-      model: model || "x-ai/grok-code-fast-1",
-      messages: [
-        { role: "system", content: systemMessage },
-        ...messages
-      ],
-      stream: true,
+    const stream = await openrouter.chat.send({
+      chatRequest: {
+        model: model || "x-ai/grok-code-fast-1",
+        messages: [
+          { role: "system", content: systemMessage },
+          ...messages
+        ],
+        stream: true,
+      }
     });
 
     console.log("[v0] Stream created successfully");
@@ -40,12 +63,12 @@ export async function POST(req: Request) {
           const encoder = new TextEncoder();
           let chunkCount = 0;
           try {
-            for await (const chunk of stream) {
+            for await (const chunk of stream as AsyncIterable<StreamChunk>) {
               chunkCount++;
               console.log(`[v0] Received chunk ${chunkCount}:`, JSON.stringify(chunk).substring(0, 200));
               
-              const text = chunk.choices[0]?.delta?.content || "";
-              const reasoning = (chunk.choices[0]?.delta as any)?.reasoning || "";
+              const text = chunk.choices?.[0]?.delta?.content || "";
+              const reasoning = chunk.choices?.[0]?.delta?.reasoning || "";
 
               if (reasoning) {
                 console.log("[v0] Reasoning block:", reasoning.substring(0, 100));
@@ -57,14 +80,15 @@ export async function POST(req: Request) {
               }
             }
             console.log("[v0] Stream completed. Total chunks:", chunkCount);
-          } catch (e: any) {
-            console.error("[v0] Stream error:", e);
-            if (e.name === 'AbortError') {
+          } catch (e) {
+            const error = e as Error & { name?: string; statusCode?: number };
+            console.error("[v0] Stream error:", error);
+            if (error.name === 'AbortError') {
               console.log("[v0] Stream aborted by user");
             } else {
-              const errorMsg = e.statusCode === 429 
+              const errorMsg = error.statusCode === 429 
                 ? "Rate limit reached on OpenRouter. Please add credits to your OpenRouter account to continue using the models."
-                : `Error generating response: ${e.message}`;
+                : `Error generating response: ${error.message}`;
               console.error("[v0] Sending error to client:", errorMsg);
               controller.enqueue(encoder.encode(`\n\n[ERROR]: ${errorMsg}`));
             }
@@ -78,9 +102,10 @@ export async function POST(req: Request) {
         headers: { "Content-Type": "text/plain; charset=utf-8" },
       }
     );
-  } catch (e: any) {
-    console.error("[v0] API initialization error:", e);
-    const errorMessage = e.message || "Failed to initialize chat stream";
+  } catch (e) {
+    const error = e as Error;
+    console.error("[v0] API initialization error:", error);
+    const errorMessage = error.message || "Failed to initialize chat stream";
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

@@ -7,8 +7,23 @@ type FileItem = {
     content: string
 }
 
+interface AuthConfig {
+  teamId: string;
+  projectId: string;
+  token: string;
+}
+
+interface SandboxRequest {
+  files: FileItem[];
+  sandboxName?: string;
+}
+
+interface CommandResult {
+  id?: string;
+}
+
 export async function POST(req: Request) {
-  const { files, sandboxName } = await req.json();
+  const { files, sandboxName } = await req.json() as SandboxRequest;
 
   console.log("[v0] Sandbox API called");
   console.log("[v0] Files to sync:", files?.length || 0);
@@ -16,7 +31,7 @@ export async function POST(req: Request) {
 
   try {
     const name = sandboxName || "open-brainy-default";
-    const authConfig = {
+    const authConfig: AuthConfig = {
       teamId: process.env.VERCEL_TEAM_ID!,
       projectId: process.env.VERCEL_PROJECT_ID!,
       token: process.env.VERCEL_TOKEN!,
@@ -29,13 +44,13 @@ export async function POST(req: Request) {
       console.log("[v0] Attempting to get existing sandbox:", name);
       sandbox = await Sandbox.get({ name, ...authConfig });
       console.log("[v0] Got existing sandbox");
-    } catch (e) {
+    } catch {
       console.log("[v0] Creating new sandbox:", name);
       sandbox = await Sandbox.create({
         name,
         ...authConfig,
         snapshotExpiration: 14 * 24 * 60 * 60 * 1000,
-        resources: { vcpus: 2 } as any,
+        resources: { vcpus: 2 },
       });
       console.log("[v0] New sandbox created");
     }
@@ -59,8 +74,8 @@ export async function POST(req: Request) {
       cmd: "npm",
       args: ["run", "dev"],
       detached: true,
-    });
-    console.log("[v0] Dev server started, process:", (result as any).id);
+    }) as CommandResult;
+    console.log("[v0] Dev server started, process:", result.id);
 
     const domain = sandbox.domain(3000);
     const protocolUrl = domain.startsWith('http') ? domain : `https://${domain}`;
@@ -71,14 +86,15 @@ export async function POST(req: Request) {
       sandboxName: sandbox.name,
       url: protocolUrl,
       status: "industrial_active",
-      processId: (result as any).id
+      processId: result.id
     });
-  } catch (error: any) {
-    console.error("[v0] Sandbox error:", error);
-    console.error("[v0] Error message:", error.message);
+  } catch (error) {
+    const err = error as Error;
+    console.error("[v0] Sandbox error:", err);
+    console.error("[v0] Error message:", err.message);
     return Response.json({
       error: "Brainy Backend Cluster Failure",
-      message: error.message,
+      message: err.message,
     }, { status: 500 });
   }
 }
