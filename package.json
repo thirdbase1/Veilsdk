@@ -9,12 +9,13 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@openrouter/sdk": "^0.12.14",
     "@vercel/sandbox": "^2.0.0-beta.13",
     "ai": "^6.0.168",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.8.0",
-    "next": "^16.2.4",
+    "next": "15.1.0",
     "openai": "^6.34.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
