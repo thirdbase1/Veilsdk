@@ -7,32 +7,18 @@ import {
   Plus,
   Send,
   ChevronDown,
-  ArrowRight,
   Monitor,
   Smartphone,
-  Code2,
-  Terminal,
   Loader2,
   Zap,
-  User,
   MessageSquare,
-  Sparkles,
-  BrainCircuit,
   Brain,
   FileCode,
-  FolderOpen,
-  Search,
-  Layout,
-  ArrowUpRight,
   ShieldCheck,
   Mic,
-  Image as ImageIcon,
   Menu,
-  Settings,
-  Share2,
   AlertTriangle,
   X,
-  History,
   Trash2,
   Square
 } from "lucide-react"
@@ -48,13 +34,6 @@ const MODELS = [
   { id: "z-ai/glm-4.5-air:free", name: "GLM 4.5 Air", power: 3 },
   { id: "nvidia/nemotron-3-super-120b-a12b:free", name: "Nemotron 120B", power: 3 },
   { id: "nvidia/nemotron-nano-9b-v2:free", name: "Nemotron Nano", power: 1 },
-]
-
-const QUICK_STARTS = [
-  "Build a SaaS landing page with Tailwind",
-  "Create an AI analytics dashboard",
-  "Build a multi-step component form",
-  "Create a personal portfolio site"
 ]
 
 // --- Atomic Components ---
@@ -135,7 +114,7 @@ const IntelligenceSelector = ({ value, onChange, align = "top" }: { value: strin
               )}
             >
               <div className="px-3 py-2 text-[10px] text-[#555] font-black uppercase tracking-[0.3em] mb-1">Intelligence Models</div>
-              {MODELS.map((m, idx) => {
+              {MODELS.map((m) => {
                 const caps = getModelCapabilities(m.id)
                 const isActive = value === m.id
                 return (
@@ -271,7 +250,7 @@ export default function OpenBrainyApp() {
         store.updateLastMessage(
           sessionId,
           () => cleanContent,
-          () => thinking
+          () => thinking || ""
         )
 
         // Real-time file operations parsing
@@ -342,8 +321,9 @@ export default function OpenBrainyApp() {
           }
       }
 
-    } catch (e: any) {
-        console.error(e)
+    } catch (e) {
+        const error = e as Error;
+        console.error(error)
     } finally {
       setIsGenerating(false)
       setTaskStatus(null)
@@ -360,20 +340,23 @@ export default function OpenBrainyApp() {
   }
 
   const startVoice = () => {
-    if (!('webkitSpeechRecognition' in window)) {
+    const SpeechRecognition = (window as unknown as Record<string, unknown>).webkitSpeechRecognition || (window as unknown as Record<string, unknown>).SpeechRecognition
+    if (!SpeechRecognition) {
         alert("Voice recognition not supported in this browser.")
         return
     }
-    const recognition = new (window as any).webkitSpeechRecognition()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const recognition = new (SpeechRecognition as any)()
     recognition.continuous = false
     recognition.interimResults = false
     recognition.lang = "en-US"
 
     recognition.onstart = () => setIsListening(true)
     recognition.onend = () => setIsListening(false)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recognition.onresult = (event: any) => {
         const text = event.results[0][0].transcript
-        setInput(prev => prev + (prev ? " " : "") + text)
+        setInput((prev: string) => prev + (prev ? " " : "") + text)
     }
     recognition.start()
   }
@@ -385,10 +368,11 @@ export default function OpenBrainyApp() {
         method: "POST",
         body: JSON.stringify({ files: codebase, sandboxName: `ob-ws-${id.slice(0,8)}` }),
       })
-      const data = await res.json()
+      const data = await res.json() as Record<string, string>;
       if (data.url) setSandboxUrl(data.url)
-    } catch (e: any) {
-        console.error(e)
+    } catch (e) {
+        const error = e as Error;
+        console.error(error)
     } finally {
         setTaskStatus(null)
     }
@@ -733,13 +717,13 @@ export default function OpenBrainyApp() {
                             </div>
                             <div className="flex-1 flex overflow-hidden">
                                 <div className="hidden lg:block w-48 border-r border-white/10 p-3 space-y-1 overflow-auto bg-[#080808]">
-                                    {activeSession.files.map((f, idx) => (
+                                    {activeSession.files.map((f) => (
                                         <div
                                           key={f.path}
                                           onClick={() => setActiveFile(f.path)}
                                           className={cn(
                                             "flex items-center space-x-2 px-3 py-2 rounded-lg text-[11px] font-bold transition-all truncate cursor-pointer relative group",
-                                            (activeFile === f.path || (!activeFile && idx === 0)) ? "bg-white/10 text-white" : "text-[#444] hover:bg-white/5 hover:text-[#888]"
+                                            activeFile === f.path ? "bg-white/10 text-white" : "text-[#444] hover:bg-white/5 hover:text-[#888]"
                                           )}
                                         >
                                             <FileCode className="w-3.5 h-3.5" />
@@ -755,7 +739,7 @@ export default function OpenBrainyApp() {
                                         {activeSession.files.find(f => f.path === (activeFile || activeSession.files[0]?.path))?.content ? (
                                           <CodePreview content={activeSession.files.find(f => f.path === (activeFile || activeSession.files[0]?.path))?.content || ""} />
                                         ) : (
-                                          <div className="text-[#888] text-[13px] italic">// Select a file to view code.</div>
+                                          <div className="text-[#888] text-[13px] italic">{"// Select a file to view code."}</div>
                                         )}
                                     </div>
                                     {isGenerating && (
