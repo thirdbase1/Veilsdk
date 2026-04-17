@@ -33,16 +33,16 @@ export async function POST(req: Request) {
 
   const systemMessage = `${GENERATOR_SYSTEM_PROMPT}\n\n${codebaseView}`;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const response = await openrouter.chat.send({
-    chatRequest: {
-        model: model || "google/gemini-2.0-flash-001:free",
-        messages: [
-            { role: "system", content: systemMessage },
-            ...messages
-        ],
-        stream: true,
-    }
-  });
+    model: model || "google/gemini-2.0-flash-001:free",
+    messages: [
+        { role: "system", content: systemMessage },
+        ...messages
+    ],
+    stream: true,
+    include_reasoning: true
+  } as any);
 
   return new Response(
     new ReadableStream({
@@ -53,8 +53,11 @@ export async function POST(req: Request) {
           if (stream && typeof stream[Symbol.asyncIterator] === 'function') {
             for await (const chunk of stream) {
               const delta = chunk.choices[0]?.delta;
+
+              // Handle reasoning (thinking) from OpenRouter
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const reasoning = (delta as any)?.reasoning || "";
               const text = delta?.content || "";
-              const reasoning = delta?.reasoning || "";
 
               if (reasoning) {
                 controller.enqueue(encoder.encode(`<thinking>${reasoning}</thinking>`));
@@ -64,9 +67,14 @@ export async function POST(req: Request) {
               }
             }
           } else {
-            const staticResponse = response as unknown as { choices: { message: { content: string } }[] };
-            const text = staticResponse.choices?.[0]?.message?.content || "";
-            controller.enqueue(encoder.encode(text));
+            const staticResponse = response as unknown as { choices: { message: { content: string; reasoning?: string } }[] };
+            const msg = staticResponse.choices?.[0]?.message;
+            if (msg?.reasoning) {
+              controller.enqueue(encoder.encode(`<thinking>${msg.reasoning}</thinking>`));
+            }
+            if (msg?.content) {
+              controller.enqueue(encoder.encode(msg.content));
+            }
           }
         } catch (e: unknown) {
           const error = e as Error;

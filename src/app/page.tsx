@@ -178,6 +178,10 @@ export default function OpenBrainyApp() {
         sessionId = store.createSession(promptValue, model)
     }
 
+    // Critical: Get latest session state to avoid closure staleness
+    const freshSession = useBrainyStore.getState().sessions.find(s => s.id === sessionId)
+    if (!freshSession) return
+
     const userMsg: Message = { role: "user", content: promptValue }
     store.addMessage(sessionId, userMsg)
     if (!forcedPrompt) setInput("")
@@ -189,9 +193,9 @@ export default function OpenBrainyApp() {
         method: "POST",
         signal: abortControllerRef.current.signal,
         body: JSON.stringify({
-            messages: [...(activeSession?.messages || []), userMsg],
+            messages: [...freshSession.messages, userMsg],
             model,
-            files: activeSession?.files || []
+            files: freshSession.files
         }),
       })
 
@@ -482,8 +486,8 @@ export default function OpenBrainyApp() {
 
       {/* --- Desktop Left / Mobile Chat Panel --- */}
       <div className={cn(
-          "flex-col bg-[#0a0a0a] border-r border-white/10 shrink-0 lg:w-[450px] transition-all",
-          isMobile ? (mobileTab === "chat" ? "flex h-full" : "hidden") : "flex h-full"
+          "flex-col bg-[#0a0a0a] border-r border-white/10 shrink-0 lg:w-[450px] transition-all h-full overflow-hidden",
+          isMobile ? (mobileTab === "chat" ? "flex" : "hidden") : "flex"
       )}>
         <header className="hidden lg:flex h-11 border-b border-white/10 items-center px-4 justify-between">
             <div className="flex items-center space-x-3 cursor-pointer hover:opacity-70 transition-opacity" onClick={toggleSidebar}>
@@ -532,7 +536,7 @@ export default function OpenBrainyApp() {
             )}
         </div>
 
-        <div className="p-4 bg-[#0a0a0a]">
+        <div className="p-4 bg-[#0a0a0a] shrink-0 border-t border-white/5">
           <div className="relative bg-[#0f0f0f] border border-white/10 rounded-xl p-3 shadow-2xl focus-within:border-white/20 transition-all">
             <textarea
                 value={input}
