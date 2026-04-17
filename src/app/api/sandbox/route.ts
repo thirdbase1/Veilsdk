@@ -1,5 +1,7 @@
 import { Sandbox } from "@vercel/sandbox";
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request) {
   const { code, sandboxId } = await req.json();
 
@@ -9,6 +11,7 @@ export async function POST(req: Request) {
     if (sandboxId) {
       sandbox = await Sandbox.get(sandboxId);
     } else {
+      // Initialize a new sandbox with a specialized template for Next.js
       sandbox = await Sandbox.create({
         source: {
           type: "git",
@@ -20,32 +23,34 @@ export async function POST(req: Request) {
     }
 
     if (!sandbox) {
-      return Response.json({ error: "Failed to initialize sandbox" }, { status: 500 });
+      return Response.json({ error: "Failed to initialize or retrieve sandbox." }, { status: 500 });
     }
 
-    // Update the main page code
+    // Write the generated code to the primary entry point
     await sandbox.writeFiles([{
       path: "src/app/page.tsx",
       content: code,
     }]);
 
-    // Start dev server in detached mode if it's a new sandbox or ensure it's running
-    // In a real agent app, we might check if 'npm run dev' is already active
-    await sandbox.runCommand({
+    // Track the process and logs
+    const result = await sandbox.runCommand({
       cmd: "npm",
       args: ["run", "dev"],
       detached: true,
     });
 
-    // Wait a brief moment for the dev server to start
-    // In a production app, we would poll the domain until it responds 200
-
+    // Provide the live URL and sandbox identifier
     return Response.json({
-      sandboxId: (sandbox as any).id || (sandbox as any).sandboxId,
+      sandboxId: (sandbox as any).id || (sandbox as any).sandboxId || sandboxId,
       url: sandbox.domain(3000),
+      status: "running",
+      processId: (result as any).id
     });
   } catch (error: any) {
-    console.error("Sandbox error:", error);
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error("Vercel Sandbox execution error:", error);
+    return Response.json({
+        error: error.message,
+        details: "Check your VERCEL_OIDC_TOKEN or network connectivity."
+    }, { status: 500 });
   }
 }
