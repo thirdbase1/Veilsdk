@@ -514,15 +514,40 @@ export default function OpenBrainyApp() {
                     </div>
                     <div className={cn("text-[14px] leading-relaxed whitespace-pre-wrap max-w-full", m.role === "user" ? "text-white" : "text-[#aaa]")}>
                         {m.thinking && (
-                            <details className="mb-4 group">
-                                <summary className="list-none cursor-pointer flex items-center space-x-2 text-[11px] text-[#555] font-black uppercase tracking-widest hover:text-[#888] transition-colors">
-                                    <BrainCircuit className="w-3 h-3" />
-                                    <span>Thought Process</span>
-                                </summary>
-                                <div className="mt-3 bg-[#0f0f0f] border border-white/5 rounded-xl p-4 text-[12px] text-[#666] italic leading-relaxed">
-                                    {m.thinking}
+                            <div className="mb-8 group/think">
+                                <div className="flex items-center space-x-3 mb-4">
+                                    <div className="relative">
+                                        <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full blur opacity-20 group-hover/think:opacity-40 transition-opacity duration-1000"></div>
+                                        <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-black border border-white/10 shadow-2xl">
+                                            <BrainCircuit className="w-4 h-4 text-indigo-400 animate-pulse" />
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] text-white font-black uppercase tracking-[0.3em]">Architectural Reasoning</span>
+                                        <span className="text-[8px] text-[#444] font-bold uppercase tracking-widest mt-0.5">Strategic Logic Engine Active</span>
+                                    </div>
+                                    <div className="h-px flex-1 bg-gradient-to-r from-white/10 via-white/5 to-transparent" />
                                 </div>
-                            </details>
+                                <div className="relative ml-4 pl-6 border-l-2 border-indigo-500/10 group-hover/think:border-indigo-500/30 transition-all duration-700">
+                                    <div className="absolute -left-[2px] top-0 h-4 w-[2px] bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
+                                    <div className="absolute -left-[2px] bottom-0 h-4 w-[2px] bg-indigo-500/20" />
+
+                                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/[0.02] to-transparent rounded-r-3xl" />
+
+                                    <div className="relative text-[13px] text-[#666] leading-[1.8] font-medium selection:bg-indigo-500/30 selection:text-white group-hover/think:text-[#999] transition-colors duration-700">
+                                        {m.thinking.split('\n').map((line, idx) => (
+                                            <p key={idx} className={cn(idx > 0 && "mt-3")}>
+                                                {line}
+                                            </p>
+                                        ))}
+                                    </div>
+
+                                    {/* Industrial Decoration */}
+                                    <div className="absolute bottom-0 right-0 p-2 opacity-0 group-hover/think:opacity-100 transition-opacity">
+                                        <Zap className="w-3 h-3 text-indigo-500/20" />
+                                    </div>
+                                </div>
+                            </div>
                         )}
                         {m.content || (isGenerating && i === activeSession.messages.length - 1 && <div className="flex space-x-1 py-1"><div className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce" /><div className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce [animation-delay:0.2s]" /></div>)}
                     </div>

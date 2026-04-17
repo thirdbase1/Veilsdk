@@ -33,16 +33,17 @@ export async function POST(req: Request) {
 
   const systemMessage = `${GENERATOR_SYSTEM_PROMPT}\n\n${codebaseView}`;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const response = await openrouter.chat.send({
-    model: model || "google/gemini-2.0-flash-001:free",
-    messages: [
-        { role: "system", content: systemMessage },
-        ...messages
-    ],
-    stream: true,
-    include_reasoning: true
-  } as any);
+  const response = (await openrouter.chat.send({
+    chatRequest: {
+      model: model || "google/gemini-2.0-flash-001:free",
+      messages: [
+          { role: "system", content: systemMessage },
+          ...messages
+      ],
+      stream: true,
+      include_reasoning: true
+    }
+  } as any)) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   return new Response(
     new ReadableStream({
@@ -55,8 +56,7 @@ export async function POST(req: Request) {
               const delta = chunk.choices[0]?.delta;
 
               // Handle reasoning (thinking) from OpenRouter
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const reasoning = (delta as any)?.reasoning || "";
+              const reasoning = (delta as Record<string, unknown>)?.reasoning as string || "";
               const text = delta?.content || "";
 
               if (reasoning) {

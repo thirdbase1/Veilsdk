@@ -23,15 +23,16 @@ export async function POST(req: Request) {
 
   for (const model of REVIEW_MODELS) {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const response = await openrouter.chat.send({
-        model,
-        messages: [
-            { role: "system", content: REVIEWER_SYSTEM_PROMPT },
-            { role: "user", content: `USER PROMPT: ${prompt}\n\nGENERATED CODEBASE:\n${codebaseStr}` }
-        ],
-        stream: false,
-      } as any) as { choices: { message: { content: string } }[] };
+      const response = (await openrouter.chat.send({
+        chatRequest: {
+          model,
+          messages: [
+              { role: "system", content: REVIEWER_SYSTEM_PROMPT },
+              { role: "user", content: `USER PROMPT: ${prompt}\n\nGENERATED CODEBASE:\n${codebaseStr}` }
+          ],
+          stream: false,
+        }
+      } as any)) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
       const content = response.choices[0]?.message?.content;
       if (content) {

@@ -44,7 +44,10 @@ export async function POST(req: Request) {
     // Orchestrate environment: Install dependencies before running
     await sandbox.runCommand("npm", ["install"]);
 
-    const result = await sandbox.runCommand("npm", ["run", "dev"]);
+    // Start dev server in a detached/background state to avoid blocking
+    // In Vercel Sandbox SDK, detached: true is handled differently depending on the version
+    // but the most reliable way for long-running processes is to not await a blocking completion
+    const result = sandbox.runCommand("npm", ["run", "dev"]);
 
     const domain = sandbox.domain(3000);
     const protocolUrl = domain.startsWith('http') ? domain : `https://${domain}`;
