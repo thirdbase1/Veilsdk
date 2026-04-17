@@ -8,15 +8,14 @@ export async function POST(req: Request) {
 
   const openrouter = new OpenAI({
     baseURL: "https://openrouter.ai/api/v1",
-    apiKey: process.env.OPENROUTER_API_KEY || "dummy",
+    apiKey: process.env.OPENROUTER_API_KEY || "industrial_dummy",
   });
 
-  // Inject current codebase context into the system message
-  const codebaseCtx = files && files.length > 0
-    ? `CURRENT CODEBASE:\n${files.map((f: any) => `[${f.path}]\n${f.content}`).join("\n\n")}`
-    : "The codebase is currently empty.";
+  const codebaseView = files && files.length > 0
+    ? `INDUSTRIAL CODEBASE STATE:\n${files.map((f: any) => `### FILE: ${f.path}\n${f.content}`).join("\n\n")}`
+    : "STATE: NEW_PROJECT_EMPTY";
 
-  const systemMessage = `${GENERATOR_SYSTEM_PROMPT}\n\n${codebaseCtx}`;
+  const systemMessage = `${GENERATOR_SYSTEM_PROMPT}\n\n${codebaseView}`;
 
   const response = await openrouter.chat.completions.create({
     model: model || "google/gemini-2.0-flash-001:free",
@@ -25,16 +24,23 @@ export async function POST(req: Request) {
       ...messages
     ],
     stream: true,
+    temperature: 0.1, // Industrial precision
   });
 
   return new Response(
     new ReadableStream({
       async start(controller) {
-        for await (const chunk of response) {
-          const text = chunk.choices[0]?.delta?.content || "";
-          controller.enqueue(new TextEncoder().encode(text));
+        const encoder = new TextEncoder();
+        try {
+          for await (const chunk of response) {
+            const text = chunk.choices[0]?.delta?.content || "";
+            controller.enqueue(encoder.encode(text));
+          }
+        } catch (e) {
+          console.error("Stream break:", e);
+        } finally {
+          controller.close();
         }
-        controller.close();
       },
     }),
     {
